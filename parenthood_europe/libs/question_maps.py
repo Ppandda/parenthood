@@ -1,4 +1,5 @@
-# parenthood_europe/libs/question_maps.py
+
+from libs.transform_time import unified_time_to_weeks
 
 
 # DE2 – single choice
@@ -395,6 +396,322 @@ DE9 = {
     }
 }
 
+
+# DE10 – numeric per activity (hours per workday)
+DE10 = {
+    "sub_map": {
+        "1": "career-focused activities",
+        "2": "household-related duties",
+        "3": "childcare-related duties",
+        "4": "other care-related duties",
+        "5": "social activities",
+        "6": "recreational activities",
+        "7": "sleeping",
+        "8": "other activities"
+    }
+}
+
+
+DE11 = DE10
+
+
+# DE12 – single choice
+DE12 = {
+    "value_map": {
+        "1": "Never",
+        "2": "Rarely (1–2 days per month)",
+        "3": "Occasionally (1–2 days per week)",
+        "4": "Frequently (3–4 days per week)",
+        "5": "Always (5 days per week)",
+    }
+}
+
+#####################
+
+# DE13a – CV file upload
+DE13a = {
+    "type": "file_upload",
+    "description": "Whether the participant uploaded a CV file."
+}
+
+
+# DE13b – academic profile links
+DE13b = {
+    "type": "url_fields",
+    "columns": {
+        "Google Scholar": "DE13b_1",
+        "ORCID": "DE13b_2",
+        "ResearchGate": "DE13b_3",
+        "Web of Science": "DE13b_4",
+        "Scopus": "DE13b_5",
+        "OpenAlex": "DE13b_6",
+        "CV URL": "DE13b_7"
+    }
+}
+
+
+DE13 = {
+    "type": "optional_numeric_metrics",
+    "columns": {
+        "total_publications": "DE13_1",
+        "total_citations": "DE13_2",
+        "h_index": "DE13_3",
+        "i10_index": "DE13_4",
+        "unique_coauthors": "DE13_5",
+        "research_interest_score": "DE13_6",
+        "total_awarded_grants": "DE13_7"
+    }
+}
+
+
+########################
+
+
+DE14 = {
+    "value_map": {
+        "1": "Woman",
+        "2": "Man",
+        "3": "Non-binary person"
+    },
+    "row_map": {
+        "1": "Parent 1",
+        "2": "Parent 2"
+    }
+}
+
+
+DE15 = {
+    "value_map": {
+        "1": "No formal education",
+        "2": "Primary education",
+        "3": "Lower secondary",
+        "4": "Upper secondary",
+        "5": "Post-secondary non-tertiary",
+        "6": "Short-cycle tertiary",
+        "7": "Bachelor’s degree or equivalent",
+        "8": "Master’s degree or equivalent",
+        "9": "Doctoral degree or equivalent"
+    },
+    "row_map": {
+        "1": "Parent 1",
+        "2": "Parent 2"
+    }
+}
+
+
+DE16 = {
+    "value_map": {
+        "1": "Employed full time",
+        "2": "Employed part time",
+        "3": "Self-employed",
+        "4": "Unemployed",
+        "5": "Retired",
+        "6": "Unable to work (disability, etc.)",
+        "7": "Homemaker or full-time caregiver",
+        "8": "Other",
+        "9": "Don't know / Prefer not to say"
+    },
+    "row_map": {
+        "1": "Parent 1",
+        "2": "Parent 2"
+    }
+}
+
+
+# DE17 — Partner/spouse gender identity
+DE17 = {
+    "value_map": {
+        "1": "Woman",
+        "2": "Man",
+        "3": "Non-binary person",
+        "4": "Prefer not to answer"
+    }
+}
+
+# DE18 — Partner/spouse primary occupation
+DE18 = {
+    "value_map": {
+        "1": "Employed full-time",
+        "2": "Employed part-time",
+        "3": "Self-employed",
+        "4": "Unemployed",
+        "5": "Homemaker",
+        "6": "Student",
+        "7": "Retired",
+        "8": "Other (please specify)"
+    }
+}
+
+# DE19 — Is your partner/spouse currently an academic?
+DE19 = {
+    "value_map": {
+        "1": "Yes",
+        "2": "No",
+        "3": "Other (please specify)"
+    }
+}
+
+# DE20 — Does your partner/spouse hold a PhD. or doctorate degree?
+DE20 = {
+    "value_map": {
+        "1": "Yes",
+        "2": "No"
+    }
+}
+
+
+# DE23 – matrix about child birth years and countries
+DE23 = {
+    "row_map": {
+        str(i): f"{i}{'st' if i == 1 else 'nd' if i == 2 else 'rd' if i == 3 else 'th'} child"
+        for i in range(1, 11)
+    },
+    "sub_map": {
+        "1": "Year (YYYY)",
+        "2": "Country"
+    },
+    "value_map": {
+        # Could define allowed year range here, or validate separately
+        "year_range": (1900, 2025),
+        #"country_map": COUNTRY_MAP  # ← from DE5 and DE6
+    }
+}
+
+
+# DE24 – multiple choice: reasons for not having children
+DE24 = {
+    "value_map": {
+        "1": "I simply don’t want kids",
+        "2": "Medical reasons",
+        "3": "Financial reasons",
+        "4": "Negative impact on career advancement",
+        "5": "No partner or lack of a supportive partner",
+        "6": "Age",
+        "7": "State of the world",
+        "8": "Climate change / the environment",
+        "9": "Partner doesn’t want kids",
+        "10": "Other reasons"
+    }
+}
+
+
+# PL1 – matrix: paid parental leave policy by academic role
+PL1 = {
+    "row_map": {
+        "1": "PhD students",
+        "2": "Postdocs",
+        "3": "Faculty (untenured)",
+        "4": "Faculty (tenure-track)",
+        "5": "Faculty (tenured)"
+    },
+    "value_map": {
+        "1": "No",
+        "2": "Yes, teaching relief only",
+        "3": "Yes, teaching and service relief",
+        "4": "Yes, full relief of duties",
+        "5": "Don't know"
+    }
+}
+
+
+PL2 = {
+    "row_map": {
+        "1": "PhD students",
+        "2": "Postdocs",
+        "3": "Faculty (untenured)",
+        "4": "Faculty (tenure-track)",
+        "5": "Faculty (tenured)"
+    },
+    "sub_map": {
+        "1": "Weeks",
+        "2": "Months",
+        "3": "Quarters",
+        "4": "Semesters"
+    },
+    "value_map": {
+        "min_value": 0,
+        "max_value": 52  # Optional, assume 1 year max unless data shows otherwise
+    }
+}
+
+
+PL3 = {
+    "1": "There is no need for it",
+    "2": "Teaching relief only",
+    "3": "Teaching and service relief",
+    "4": "Full relief of duties",
+    "5": "Other"  # optionally support free-text
+}
+
+
+PL4 = {
+    "row_map": {
+        "1": "PhD students",
+        "2": "Postdocs",
+        "3": "Professors"
+    },
+    "sub_map": {
+        "1": "Maternal (mother)",
+        "2": "Paternal (father)"
+    },
+    "value_map": {
+        "min_value": 0,
+        "max_value": 36  # assuming max 3 years; adjust based on actual data
+    }
+}
+
+
+PL5 = {
+    "1": "Men and women should be offered the same unpaid parental leave",
+    "2": "Women should get more",
+    "3": "Men should get more",
+    "4": "Something else"  # open-text box is linked here
+}
+
+
+PL6 = {
+    "row_map": {
+        str(i): f"Your {i}{'st' if i == 1 else 'nd' if i == 2 else 'rd' if i == 3 else 'th'} child"
+        for i in range(1, 10)
+    } | {
+        "10": "Your 10th child (if you have more than 10 kids, please consider the youngest)"
+    },
+    "sub_map": {
+        "1": "No, I did not take the leave",
+        "2": "Yes, and I did not do anything work-related during that time",
+        "3": "Yes, and I spent up to 1/3 of that time on work-related activities",
+        "4": "Yes, and I spent about half of that time on work-related activities",
+        "5": "Yes, and I spent at least 2/3 of that time on work-related activities",
+        "6": "Not applicable"
+    }
+}
+
+
+PL7 = {
+    "row_map": {
+        str(i): f"{i}{'st' if i==1 else 'nd' if i==2 else 'rd' if i==3 else 'th'} child"
+        for i in range(1, 10)
+    } | {
+        "10": "10th child (youngest if more than 10)"
+    },
+    "sub_map": {
+        "1": "Weeks",
+        "2": "Months",
+        "3": "Quarters",
+        "4": "Semesters"
+    },
+    "value_transform": unified_time_to_weeks  # this is the key distinction
+}
+
+
+PL8 = {
+    "value_map": {
+        "1": "No",
+        "2": "Yes, but don't know how long",
+        "3": "Yes (please, enter how many years per child in numeric digits)",
+        "4": "Don't know"
+    }
+}
 
 
 # PL10 – single choice

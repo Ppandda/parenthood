@@ -1,21 +1,83 @@
+import sys
+from pathlib import Path
+from IPython.display import IFrame
+import question_maps
+
+
+# Automatically add the project root to sys.path
+ROOT = Path(__file__).resolve().parents[2]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+
 import pandas as pd
 import numpy as np
 from typing import Callable, Any, Optional
 from transform_time import months_to_weeks, unified_time_to_weeks
-
+import plotly.express as px
 
 class Question:
     """
     Base class for a survey question.
     """
-    def __init__(self, question_id: str, question_text: str, value_transform: Callable[[Any], Any] = None):
+    def __init__(self, question_id: str, df: pd.DataFrame, df_raw: pd.DataFrame, value_transform: Callable[[Any], Any] = None):
         self.question_id = question_id  # e.g., "Q1", "Q2"
-        self.question_text = question_text  # the question
-        self.value_transform = value_transform  # Function to transform raw values (e.g., months → weeks)
+        self.df = df  
+        self.df_raw = df_raw
+        self.value_transform = value_transform  
+        if question_id in df.columns:
+            self.question_text = df.loc[1, question_id]
+        else:
+            self.question_text = f"{question_id} (multi-column or missing label)"
 
-    
-    #def __repr__(self):
-    #    return f"Question({self.question_id}, {self.question_text[:30]}..., {len(self.responses)} responses)"    
+        self.value_map = getattr(question_maps, question_id, {}).get("value_map", {})
+
+
+
+    def _plot_bar_distribution(self, labels, percentages, title, summary_stats=None):
+        fig = px.bar(
+            x=labels,
+            y=percentages,
+            title=title,
+            labels={"y": "Percentage (%)"},
+            hover_data=None,
+        )
+
+        fig.update_traces(
+            marker=dict(color="#4E74BC", line=dict(color="black", width=1))
+        )
+
+        fig.update_layout(
+            width=800,
+            height=600,
+            bargap=0.05,
+            margin=dict(b=180) if summary_stats else dict(b=80),
+            xaxis=dict(title=None, tickmode="auto"),
+            yaxis_title="Percentage (%)"
+        )
+
+        fig.update_xaxes(tickangle=45, tickmode='auto')
+
+        if summary_stats:
+            fig.add_annotation(
+                text="<br>".join([
+                    f"Min: {summary_stats['Min']}",
+                    f"Max: {summary_stats['Max']}",
+                    f"Mean: {summary_stats['Mean']}",
+                    f"Median: {summary_stats['Median']}",
+                    f"Total Responses: {summary_stats['Total Responses']}"
+                ]),
+                xref="paper", yref="paper",
+                x=0, y=-0.5,
+                showarrow=False,
+                align="left",
+                font=dict(size=12),
+                bordercolor="black",
+                borderwidth=1
+            )
+
+        return fig
+
 
 
 class NumericQuestion(Question):
@@ -23,25 +85,99 @@ class NumericQuestion(Question):
     Class for a numeric-based survey question.
     DE1, DE10, DE11, DE22
     """
-    def __init__(self, question_id: str, question_text: str, df: pd.DataFrame, response_id: str):
-        super().__init__(question_id, question_text)
-        self.responses = None
+    def __init__(self, question_id: str, df: pd.DataFrame, df_raw: pd.DataFrame):
+        super().__init__(question_id, df, df_raw)
         self.min_value = 0
-        self.max_value = 10000000
+        self.max_value = 1000000
 
-        participant_data = df.loc[df["responseId"] == response_id, question_id]
+        self.subcolumns = sorted(
+            [col for col in df.columns if col.startswith(f"{question_id}_")]
+        )
 
-        if not participant_data.empty:
-            self.response = participant_data.values[0]
+        if self.subcolumns:
+            self.responses = {
+                subcol: pd.to_numeric(df[subcol], errors="coerce").dropna()
+                for subcol in self.subcolumns
+            }
+        else:
+            self.responses = pd.to_numeric(df[question_id], errors="coerce").dropna()
+            self.subcolumns = None
+        
 
-        if self.response is None or pd.isna(self.response):
-            self.response = 0
 
     def __repr__(self):
-        if self.response is None:
-            return f"{self.question_text} No answer provided."
-        return f"{self.question_text} Answer: {self.response}."
+        if self.responses is None or self.responses.empty:
+            return f"{self.question_text} — No responses provided."
+        return f"{self.question_text} — {len(self.responses)} responses collected."
 
+
+    def plot_distribution(self, display=True):
+        figs = []
+        total_participants = self.df.shape[0]
+
+        if isinstance(self.responses, dict):  # Multi-column case (e.g. DE10)
+            for subcol, responses in self.responses.items():
+                if responses.empty:
+                    continue
+
+                total_respondents = len(responses)
+                value_counts = responses.value_counts().sort_index()
+                percentages = (value_counts / total_respondents * 100).round(2)
+
+                summary_stats = {
+                    "Min": int(responses.min()),
+                    "Max": int(responses.max()),
+                    "Mean": round(responses.mean(), 2),
+                    "Median": int(responses.median()),
+                    "Total Responses": total_respondents
+                }
+
+                label_suffix = subcol.split("_")[-1]
+                label = self.value_map.get("sub_map", {}).get(label_suffix, subcol)
+
+                print(f"{label}: {total_respondents} respondents out of {total_participants} participants.")
+
+                fig = self._plot_bar_distribution(
+                    labels=value_counts.index,
+                    percentages=percentages,
+                    title=f"{self.question_text} – {label}",
+                    summary_stats=summary_stats
+                )
+                if display:
+                    fig.show()
+                figs.append(fig)
+
+        else:  # Single-column case (e.g. DE1)
+            responses = self.responses
+            if responses.empty:
+                print("No responses to plot.")
+                return
+
+            total_respondents = len(responses)
+            value_counts = responses.value_counts().sort_index()
+            percentages = (value_counts / total_respondents * 100).round(2)
+
+            summary_stats = {
+                "Min": int(responses.min()),
+                "Max": int(responses.max()),
+                "Mean": round(responses.mean(), 2),
+                "Median": int(responses.median()),
+                "Total Responses": total_respondents
+            }
+
+            print(f"{total_respondents} respondents out of {total_participants} participants.")
+
+            fig = self._plot_bar_distribution(
+                labels=value_counts.index,
+                percentages=percentages,
+                title=self.question_text,
+                summary_stats=summary_stats
+            )
+            if display:
+                fig.show()
+            figs.append(fig)
+
+        return figs if len(figs) > 1 else figs[0]
 
 
 class MultipleChoiceQuestion(Question):
@@ -98,15 +234,67 @@ class SingleChoiceQuestion(Question):
     - Additional text responses if applicable (found dynamically).
     DE2, DE4, DE5, DE6, DE8, DE12, DE14, DE15, DE16, DE17, DE18, DE19, DE20, DE21, PL5, PL8,
     """
-
-    def __init__(self, question_id: str, question_text: str, df: pd.DataFrame, response_id: str, value_map: dict = None, value_transform: Callable[[Any], Any] = None, unit_hint: Optional[str] = None):
-        super().__init__(question_id, question_text)
-        self.response = None  # Numeric response
-        self.extra_texts = {}  # Dictionary storing any additional text 
-        self.value_map = value_map or {}
-        self.value_transform = value_transform
+    def __init__(
+        self,
+        question_id: str,
+        df: pd.DataFrame,
+        df_raw: pd.DataFrame,
+        value_transform: Callable[[Any], Any] = None,
+        unit_hint: Optional[str] = None,
+    ):
+        super().__init__(question_id, df, df_raw, value_transform)
         self.unit_hint = unit_hint
 
+        # Clean up responses
+        self.responses = pd.to_numeric(self.df[question_id], errors="coerce").dropna()
+
+        # Optional: collect additional free text responses (like for "Other")
+        self.extra_texts = {}
+        for col in df.columns:
+            if col.startswith(f"{question_id}_") and col.endswith("_TEXT"):
+                option_number = col.split("_")[1]
+                text_series = df[col].dropna().astype(str)
+                if not text_series.empty:
+                    self.extra_texts[option_number] = text_series
+
+    def __repr__(self):
+        if self.responses.empty:
+            return f"{self.question_text} – No responses provided."
+        return f"{self.question_text} – {len(self.responses)} responses collected."
+
+    def plot_distribution(self, display=True):
+        value_counts = self.responses.value_counts().sort_index()
+        total = len(self.responses)
+        percentages = (value_counts / total * 100).round(2)
+
+        # Decode value_map (gender 1 = woman, etc.)
+        labels = [
+            self.value_map.get(str(int(x)), f"Option {int(x)}")
+            for x in value_counts.index
+        ]
+
+        print(f"{total} respondents out of {self.df.shape[0]} participants provided a response.")
+
+        fig = self._plot_bar_distribution(
+            labels=labels,
+            percentages=percentages,
+            title=self.question_text,
+        )
+
+        if display:
+            fig.show()
+        return fig
+
+
+        """
+        def __init__(self, question_id: str, df: pd.DataFrame, value_map: dict = None, value_transform: Callable[[Any], Any] = None, unit_hint: Optional[str] = None):
+        super().__init__(question_id, df, df_raw, value_transform)
+        #self.response = None  # Numeric response
+        #self.extra_texts = {}  # Dictionary storing any additional text 
+        #self.value_map = value_map or {}
+        #self.value_transform = value_transform
+        self.unit_hint = unit_hint
+        
         participant_data = df.loc[df["responseId"] == response_id]
 
         if not participant_data.empty and question_id in participant_data.columns:
@@ -138,10 +326,49 @@ class SingleChoiceQuestion(Question):
                 pass  # gracefully fall back if parsing or transformation fails
 
 
+        def __repr__(self):
+            if self.responses.empty:
+                return f"{self.question_text} – No responses provided."
+            return f"{self.question_text} – {len(self.responses)} responses collected."
+   
 
-    def __repr__(self):
-        extra_info = next(iter(self.extra_texts.values()), "")  
-        return f"{self.question_text} Answer: {self.response} {extra_info}".strip()
+
+    def plot_distribution(self):
+        if self.df[self.question_id].isnull().all():
+            print("No valid response data available.")
+            return
+
+        responses = pd.to_numeric(self.df[self.question_id], errors="coerce").dropna()
+        if responses.empty:
+            print("No responses to plot.")
+            return
+
+        total_respondents = len(responses)
+        total_participants = self.df.shape[0]
+        print(f"{total_respondents} respondents out of {total_participants} participants provided a response.")
+
+        if self.value_map:
+            mapped = responses.map(lambda x: self.value_map.get(str(int(x)), f"Option {int(x)}"))
+        else:
+            mapped = responses.astype(str)
+
+        value_counts = mapped.value_counts()
+        percentages = (value_counts / total_respondents * 100).round(2)
+
+        # Optional: preserve original value_map order
+        if self.value_map:
+            label_order = [self.value_map[k] for k in sorted(self.value_map.keys(), key=int)]
+            percentages = percentages.reindex(label_order).dropna()
+
+        fig = self._plot_bar_distribution(
+            labels=percentages.index,
+            percentages=percentages.values,
+            title=self.question_text
+        )
+
+        fig.show()
+        return fig"""
+
 
 
 
@@ -250,44 +477,21 @@ class MatrixQuestion(Question):
     def __str__(self):
         return self.__repr__()
 
+
+
+"""if __name__ == "__main__":
+    
+    from parenthood_europe.scripts.parse_survey_data import load_survey_data
+    df, df_raw = load_survey_data(file_path = "parenthood_europe/data/Parenthood_test.xlsx")
+
+    q = NumericQuestion("DE2", df, df_raw)
+    q.plot_distribution()"""
+
+
+
+
 if __name__ == "__main__":
-    # Simulating survey data
-    data = {
-        "responseId": ["R_999999"],
-        "CS3_1": [1],   # Albania – Very good
-        "CS3_2": [2],   # Andorra – Good
-        "CS3_3": [3],   # Armenia – Bad
-        "CS3_4": [4],   # Austria – Very bad
-        "CS3_5": [5],   # Azerbaijan – Don't know
-    }
-
-    df = pd.DataFrame(data)
-    response_id = "R_999999"
-
-    value_map = {
-        "1": "Very good policies",
-        "2": "Good policies",
-        "3": "Bad policies",
-        "4": "Very bad policies",
-        "5": "Don't know"
-    }
-
-    row_map = {
-        "1": "Albania",
-        "2": "Andorra",
-        "3": "Armenia",
-        "4": "Austria",
-        "5": "Azerbaijan"
-    }
-
-    cs3_question = MatrixQuestion(
-        question_id="CS3",
-        question_text="Rate the general parental policies of the European countries you know.",
-        df=df,
-        response_id=response_id,
-        row_map=row_map,
-        value_map=value_map,
-        format="row"
-    )
-
-    print(cs3_question)
+    from parenthood_europe.scripts.parse_survey_data import load_survey_data
+    df, df_raw = load_survey_data(file_path = "parenthood_europe/data/Parenthood_test.xlsx")
+    q = SingleChoiceQuestion("DE2", df, df_raw)
+    q.plot_distribution()

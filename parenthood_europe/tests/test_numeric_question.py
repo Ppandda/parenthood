@@ -1,3 +1,4 @@
+import pandas as pd 
 import sys
 sys.path.insert(0, "/Users/Paula_1/CodingProjects/parenthood")
 
