@@ -4,11 +4,12 @@ from libs.transform_time import unified_time_to_weeks
 
 # DE2 – single choice
 DE2 = {
+    "plot_type": "continuous",
     "value_map": {
-        "1": "Woman",
-        "2": "Man",
-        "3": "Non-binary person",
-        "4": "Prefer not to answer"
+        1: "Woman",
+        2: "Man",
+        3: "Non-binary person",
+        4: "Prefer not to answer"
     }
 }
 
@@ -36,11 +37,11 @@ DE3 = {
 # DE4 – single choice (economic situation during childhood)
 DE4 = {
     "value_map": {
-        "1": "We struggled to meet basic needs (food, shelter, clothing).",
-        "2": "We met basic needs but had little extra for other things.",
-        "3": "We were comfortable and could afford some extras beyond our basic needs.",
-        "4": "We were well-off and could easily afford many extras and savings.",
-        "5": "Prefer not to say."
+        1: "We struggled to meet basic needs (food, shelter, clothing).",
+        2: "We met basic needs but had little extra for other things.",
+        3: "We were comfortable and could afford some extras beyond our basic needs.",
+        4: "We were well-off and could easily afford many extras and savings.",
+        5: "Prefer not to say."
     }
 }
 
@@ -399,15 +400,15 @@ DE9 = {
 
 # DE10 – numeric per activity (hours per workday)
 DE10 = {
+    "plot_type": "categorical",
     "sub_map": {
         "1": "career-focused activities",
-        "2": "household-related duties",
-        "3": "childcare-related duties",
-        "4": "other care-related duties",
-        "5": "social activities",
-        "6": "recreational activities",
-        "7": "sleeping",
-        "8": "other activities"
+        "3": "household-related duties",
+        "4": "childcare-related duties",
+        "5": "other care-related duties",
+        "6": "social activities",
+        "7": "recreational activities",
+        "9": "sleeping",
     }
 }
 
@@ -417,6 +418,7 @@ DE11 = DE10
 
 # DE12 – single choice
 DE12 = {
+    "plot_type": "categorical",
     "value_map": {
         "1": "Never",
         "2": "Rarely (1–2 days per month)",
@@ -554,11 +556,13 @@ DE19 = {
 # DE20 — Does your partner/spouse hold a PhD. or doctorate degree?
 DE20 = {
     "value_map": {
-        "1": "Yes",
-        "2": "No"
+        1: "Yes",
+        2: "No"
     }
 }
 
+DE22 = {
+    "plot_type": "continuous"}
 
 # DE23 – matrix about child birth years and countries
 DE23 = {
