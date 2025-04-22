@@ -1,4 +1,3 @@
-
 from libs.transform_time import unified_time_to_weeks
 
 
@@ -9,8 +8,8 @@ DE2 = {
         1: "Woman",
         2: "Man",
         3: "Non-binary person",
-        4: "Prefer not to answer"
-    }
+        4: "Prefer not to answer",
+    },
 }
 
 
@@ -29,7 +28,7 @@ DE3 = {
         "10": "Central America and Caribbean (e.g., Jamaica, Mexico, Panama)",
         "11": "South America (e.g., Brazil, Chile, Colombia)",
         "12": "Self describe",
-        "13": "Prefer not to answer"
+        "13": "Prefer not to answer",
     }
 }
 
@@ -41,7 +40,7 @@ DE4 = {
         2: "We met basic needs but had little extra for other things.",
         3: "We were comfortable and could afford some extras beyond our basic needs.",
         4: "We were well-off and could easily afford many extras and savings.",
-        5: "Prefer not to say."
+        5: "Prefer not to say.",
     }
 }
 
@@ -305,8 +304,8 @@ DE5 = {
         "254": "Western Sahara",
         "255": "Yemen",
         "256": "Zambia",
-        "257": "Zimbabwe"
-        }
+        "257": "Zimbabwe",
+    }
 }
 
 
@@ -323,7 +322,7 @@ DE7 = {
         "4": "Separated",
         "5": "Widowed",
         "6": "Divorced",
-        "7": "Prefer not to answer"
+        "7": "Prefer not to answer",
     }
 }
 
@@ -335,7 +334,7 @@ DE8 = {
         "2": "Non-tenure-track faculty",
         "3": "Tenure-track faculty",
         "4": "Tenured faculty",
-        "5": "Other (please specify)"
+        "5": "Other (please specify)",
     }
 }
 
@@ -393,7 +392,7 @@ DE9 = {
         "48": "Turkey",
         "49": "Ukraine",
         "50": "United Kingdom",
-        "51": "Vatican City"
+        "51": "Vatican City",
     }
 }
 
@@ -409,7 +408,7 @@ DE10 = {
         "6": "social activities",
         "7": "recreational activities",
         "9": "sleeping",
-    }
+    },
 }
 
 
@@ -425,7 +424,7 @@ DE12 = {
         "3": "Occasionally (1–2 days per week)",
         "4": "Frequently (3–4 days per week)",
         "5": "Always (5 days per week)",
-    }
+    },
 }
 
 #####################
@@ -433,7 +432,7 @@ DE12 = {
 # DE13a – CV file upload
 DE13a = {
     "type": "file_upload",
-    "description": "Whether the participant uploaded a CV file."
+    "description": "Whether the participant uploaded a CV file.",
 }
 
 
@@ -447,8 +446,8 @@ DE13b = {
         "Web of Science": "DE13b_4",
         "Scopus": "DE13b_5",
         "OpenAlex": "DE13b_6",
-        "CV URL": "DE13b_7"
-    }
+        "CV URL": "DE13b_7",
+    },
 }
 
 
@@ -461,8 +460,8 @@ DE13 = {
         "i10_index": "DE13_4",
         "unique_coauthors": "DE13_5",
         "research_interest_score": "DE13_6",
-        "total_awarded_grants": "DE13_7"
-    }
+        "total_awarded_grants": "DE13_7",
+    },
 }
 
 
@@ -470,53 +469,36 @@ DE13 = {
 
 
 DE14 = {
-    "value_map": {
-        "1": "Woman",
-        "2": "Man",
-        "3": "Non-binary person"
-    },
-    "row_map": {
-        "1": "Parent 1",
-        "2": "Parent 2"
-    }
+    "value_map": {"1": "Woman", "2": "Man", "3": "Non-binary person"},
+    "row_map": {"1": "Parent 1", "2": "Parent 2"},
 }
 
 
 DE15 = {
     "value_map": {
-        "1": "No formal education",
-        "2": "Primary education",
-        "3": "Lower secondary",
-        "4": "Upper secondary",
-        "5": "Post-secondary non-tertiary",
-        "6": "Short-cycle tertiary",
-        "7": "Bachelor’s degree or equivalent",
-        "8": "Master’s degree or equivalent",
-        "9": "Doctoral degree or equivalent"
+        "1": "Elementary: 0-4 years",
+        "2": "Elementary: 5-8 years",
+        "3": "High School: 1-3 years",
+        "4": "High School: 4 or more years",
+        "5": "College: 1-3 years",
+        "6": "College: 4 or more years",
+        "7": "Master's or professional degree",
+        "8": "Doctoral degree",
+        "9": "Dont know",
     },
-    "row_map": {
-        "1": "Parent 1",
-        "2": "Parent 2"
-    }
+    "row_map": {"1": "Parent 1", "2": "Parent 2"},
 }
 
 
 DE16 = {
     "value_map": {
-        "1": "Employed full time",
-        "2": "Employed part time",
-        "3": "Self-employed",
-        "4": "Unemployed",
-        "5": "Retired",
-        "6": "Unable to work (disability, etc.)",
-        "7": "Homemaker or full-time caregiver",
-        "8": "Other",
-        "9": "Don't know / Prefer not to say"
+        "1": "Employed",
+        "2": "Not employed: stay-at-home parent",
+        "3": "Not employed: could not find a job",
+        "4": "Not employed: other reason (e.g., retired, illness, ...)",
+        "5": "Dont know or something else",
     },
-    "row_map": {
-        "1": "Parent 1",
-        "2": "Parent 2"
-    }
+    "row_map": {"1": "Parent 1", "2": "Parent 2"},
 }
 
 
@@ -526,7 +508,7 @@ DE17 = {
         "1": "Woman",
         "2": "Man",
         "3": "Non-binary person",
-        "4": "Prefer not to answer"
+        "4": "Prefer not to answer",
     }
 }
 
@@ -540,45 +522,32 @@ DE18 = {
         "5": "Homemaker",
         "6": "Student",
         "7": "Retired",
-        "8": "Other (please specify)"
+        "8": "Other (please specify)",
     }
 }
 
 # DE19 — Is your partner/spouse currently an academic?
-DE19 = {
-    "value_map": {
-        "1": "Yes",
-        "2": "No",
-        "3": "Other (please specify)"
-    }
-}
+DE19 = {"value_map": {"1": "Yes", "2": "No", "3": "Other (please specify)"}}
 
 # DE20 — Does your partner/spouse hold a PhD. or doctorate degree?
-DE20 = {
-    "value_map": {
-        1: "Yes",
-        2: "No"
-    }
-}
+DE20 = {"value_map": {1: "Yes", 2: "No"}}
 
-DE22 = {
-    "plot_type": "continuous"}
+DE22 = {"plot_type": "continuous"}
 
 # DE23 – matrix about child birth years and countries
 DE23 = {
     "row_map": {
-        str(i): f"{i}{'st' if i == 1 else 'nd' if i == 2 else 'rd' if i == 3 else 'th'} child"
+        str(
+            i
+        ): f"{i}{'st' if i == 1 else 'nd' if i == 2 else 'rd' if i == 3 else 'th'} child"
         for i in range(1, 11)
     },
-    "sub_map": {
-        "1": "Year (YYYY)",
-        "2": "Country"
-    },
+    "sub_map": {"1": "Year (YYYY)", "2": "Country"},
     "value_map": {
         # Could define allowed year range here, or validate separately
         "year_range": (1900, 2025),
-        #"country_map": COUNTRY_MAP  # ← from DE5 and DE6
-    }
+        # "country_map": COUNTRY_MAP  # ← from DE5 and DE6
+    },
 }
 
 
@@ -594,7 +563,7 @@ DE24 = {
         "7": "State of the world",
         "8": "Climate change / the environment",
         "9": "Partner doesn’t want kids",
-        "10": "Other reasons"
+        "10": "Other reasons",
     }
 }
 
@@ -606,15 +575,15 @@ PL1 = {
         "2": "Postdocs",
         "3": "Faculty (untenured)",
         "4": "Faculty (tenure-track)",
-        "5": "Faculty (tenured)"
+        "5": "Faculty (tenured)",
     },
     "value_map": {
         "1": "No",
         "2": "Yes, teaching relief only",
         "3": "Yes, teaching and service relief",
         "4": "Yes, full relief of duties",
-        "5": "Don't know"
-    }
+        "5": "Don't know",
+    },
 }
 
 
@@ -624,18 +593,13 @@ PL2 = {
         "2": "Postdocs",
         "3": "Faculty (untenured)",
         "4": "Faculty (tenure-track)",
-        "5": "Faculty (tenured)"
+        "5": "Faculty (tenured)",
     },
-    "sub_map": {
-        "1": "Weeks",
-        "2": "Months",
-        "3": "Quarters",
-        "4": "Semesters"
-    },
+    "sub_map": {"1": "Weeks", "2": "Months", "3": "Quarters", "4": "Semesters"},
     "value_map": {
         "min_value": 0,
-        "max_value": 52  # Optional, assume 1 year max unless data shows otherwise
-    }
+        "max_value": 52,  # Optional, assume 1 year max unless data shows otherwise
+    },
 }
 
 
@@ -644,24 +608,17 @@ PL3 = {
     "2": "Teaching relief only",
     "3": "Teaching and service relief",
     "4": "Full relief of duties",
-    "5": "Other"  # optionally support free-text
+    "5": "Other",  # optionally support free-text
 }
 
 
 PL4 = {
-    "row_map": {
-        "1": "PhD students",
-        "2": "Postdocs",
-        "3": "Professors"
-    },
-    "sub_map": {
-        "1": "Maternal (mother)",
-        "2": "Paternal (father)"
-    },
+    "row_map": {"1": "PhD students", "2": "Postdocs", "3": "Professors"},
+    "sub_map": {"1": "Maternal (mother)", "2": "Paternal (father)"},
     "value_map": {
         "min_value": 0,
-        "max_value": 36  # assuming max 3 years; adjust based on actual data
-    }
+        "max_value": 36,  # assuming max 3 years; adjust based on actual data
+    },
 }
 
 
@@ -669,15 +626,18 @@ PL5 = {
     "1": "Men and women should be offered the same unpaid parental leave",
     "2": "Women should get more",
     "3": "Men should get more",
-    "4": "Something else"  # open-text box is linked here
+    "4": "Something else",  # open-text box is linked here
 }
 
 
 PL6 = {
     "row_map": {
-        str(i): f"Your {i}{'st' if i == 1 else 'nd' if i == 2 else 'rd' if i == 3 else 'th'} child"
+        str(
+            i
+        ): f"Your {i}{'st' if i == 1 else 'nd' if i == 2 else 'rd' if i == 3 else 'th'} child"
         for i in range(1, 10)
-    } | {
+    }
+    | {
         "10": "Your 10th child (if you have more than 10 kids, please consider the youngest)"
     },
     "sub_map": {
@@ -686,8 +646,8 @@ PL6 = {
         "3": "Yes, and I spent up to 1/3 of that time on work-related activities",
         "4": "Yes, and I spent about half of that time on work-related activities",
         "5": "Yes, and I spent at least 2/3 of that time on work-related activities",
-        "6": "Not applicable"
-    }
+        "6": "Not applicable",
+    },
 }
 
 
@@ -695,16 +655,10 @@ PL7 = {
     "row_map": {
         str(i): f"{i}{'st' if i==1 else 'nd' if i==2 else 'rd' if i==3 else 'th'} child"
         for i in range(1, 10)
-    } | {
-        "10": "10th child (youngest if more than 10)"
-    },
-    "sub_map": {
-        "1": "Weeks",
-        "2": "Months",
-        "3": "Quarters",
-        "4": "Semesters"
-    },
-    "value_transform": unified_time_to_weeks  # this is the key distinction
+    }
+    | {"10": "10th child (youngest if more than 10)"},
+    "sub_map": {"1": "Weeks", "2": "Months", "3": "Quarters", "4": "Semesters"},
+    "value_transform": unified_time_to_weeks,  # this is the key distinction
 }
 
 
@@ -713,7 +667,7 @@ PL8 = {
         "1": "No",
         "2": "Yes, but don't know how long",
         "3": "Yes (please, enter how many years per child in numeric digits)",
-        "4": "Don't know"
+        "4": "Don't know",
     }
 }
 
@@ -724,7 +678,7 @@ PL10 = {
         "1": "Yes, much better",
         "2": "Yes, slightly better",
         "3": "Just the bare minimum",
-        "4": "Don't know"
+        "4": "Don't know",
     }
 }
 
@@ -734,31 +688,26 @@ CS2 = {
         "1": "Yes, much better",
         "2": "Yes, slightly better",
         "3": "Just the bare minimum",
-        "4": "Don't know"
+        "4": "Don't know",
     }
 }
 
 # CS1 – matrix question about each child
 CS1 = {
-    "value_map_1": {
-        "1": "No",
-        "2": "Yes",
-        "3": "Don't know"
-    },
+    "value_map_1": {"1": "No", "2": "Yes", "3": "Don't know"},
     "value_map_2": {
         "1": "No",
         "2": "Yes",
         "3": "Don't remember",
-        "4": "Not applicable"
+        "4": "Not applicable",
     },
     "row_map": {
-        str(i): f"Your {i}{'st' if i==1 else 'nd' if i==2 else 'rd' if i==3 else 'th'} child" 
+        str(
+            i
+        ): f"Your {i}{'st' if i==1 else 'nd' if i==2 else 'rd' if i==3 else 'th'} child"
         for i in range(1, 11)
     },
-    "sub_map": {
-        "1": "Childcare provided",
-        "2": "Did you use it?"
-    }
+    "sub_map": {"1": "Childcare provided", "2": "Did you use it?"},
 }
 
 # CS3 – matrix: rating parental policies across 51 countries
@@ -768,21 +717,65 @@ CS3 = {
         "2": "Good policies",
         "3": "Bad policies",
         "4": "Very bad policies",
-        "5": "Don't know"
+        "5": "Don't know",
     },
     "row_map": {
-        str(i): country for i, country in enumerate([
-            "Albania", "Andorra", "Armenia", "Austria", "Azerbaijan",
-            "Belarus", "Belgium", "Bosnia and Herzegovina", "Bulgaria", "Croatia",
-            "Cyprus", "Czech Republic", "Denmark", "Estonia", "Finland",
-            "France", "Georgia", "Germany", "Greece", "Hungary",
-            "Iceland", "Ireland", "Italy", "Kazakhstan", "Kosovo",
-            "Latvia", "Liechtenstein", "Lithuania", "Luxembourg", "Malta",
-            "Moldova", "Monaco", "Montenegro", "Netherlands", "North Macedonia (formerly Macedonia)",
-            "Norway", "Poland", "Portugal", "Romania", "Russia",
-            "San Marino", "Serbia", "Slovakia", "Slovenia", "Spain",
-            "Sweden", "Switzerland", "Turkey", "Ukraine", "United Kingdom",
-            "Vatican City (Holy See)"
-        ], start=1)
-    }
+        str(i): country
+        for i, country in enumerate(
+            [
+                "Albania",
+                "Andorra",
+                "Armenia",
+                "Austria",
+                "Azerbaijan",
+                "Belarus",
+                "Belgium",
+                "Bosnia and Herzegovina",
+                "Bulgaria",
+                "Croatia",
+                "Cyprus",
+                "Czech Republic",
+                "Denmark",
+                "Estonia",
+                "Finland",
+                "France",
+                "Georgia",
+                "Germany",
+                "Greece",
+                "Hungary",
+                "Iceland",
+                "Ireland",
+                "Italy",
+                "Kazakhstan",
+                "Kosovo",
+                "Latvia",
+                "Liechtenstein",
+                "Lithuania",
+                "Luxembourg",
+                "Malta",
+                "Moldova",
+                "Monaco",
+                "Montenegro",
+                "Netherlands",
+                "North Macedonia (formerly Macedonia)",
+                "Norway",
+                "Poland",
+                "Portugal",
+                "Romania",
+                "Russia",
+                "San Marino",
+                "Serbia",
+                "Slovakia",
+                "Slovenia",
+                "Spain",
+                "Sweden",
+                "Switzerland",
+                "Turkey",
+                "Ukraine",
+                "United Kingdom",
+                "Vatican City (Holy See)",
+            ],
+            start=1,
+        )
+    },
 }
