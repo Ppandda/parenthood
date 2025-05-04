@@ -171,13 +171,18 @@ class MatrixQuestion(Question):
 
         if self.question_id in {"DE14", "DE15", "DE16"}:
             color_args = {"color_discrete_map": GENDER_COLOR_SEQUENCE}
-            category_order = {
-                "Value": GENDER_ORDER,
-                "Group": GENDER_ORDER,
-            }
         else:
             color_args = {"color_discrete_sequence": ["#D7D9B1", "#3A6992", "#BB4430"]}
-            category_order = {value_key: value_order}
+
+        # Pull value order from question_maps.py
+        value_order = (
+            list(self.value_map.values()) if hasattr(self, "value_map") else []
+        )
+        category_order = {value_key: value_order}
+
+        # For gender questions: fix legend/group order
+        if group_key == "Group" and self.question_id in {"DE14", "DE15", "DE16"}:
+            category_order["Group"] = GENDER_ORDER
 
         if self.question_id == "DE14":
             df["BarWidth"] = 0.6
@@ -186,12 +191,10 @@ class MatrixQuestion(Question):
                 x="Value",
                 y="Percentage",
                 color="Value",
-                # color_discrete_sequence=["Man":"#3A6992", "Woman":"#BB4430", "Non-binary person":"#D7D9B1"],
                 title=wrapped_title,
                 text=df["Percentage"].apply(lambda x: f"{round(x, 1)}%"),
                 hover_data=["Count"],
                 category_orders=category_order,
-                # category_orders={"Value": ["Man", "Woman", "Non-binary person"]},
                 **color_args,
             )
             fig.update_traces(width=df["BarWidth"])
@@ -203,7 +206,6 @@ class MatrixQuestion(Question):
                 y="Percentage",
                 color=group_key,
                 barmode="group",
-                # color_discrete_sequence=["#D7D9B1", "#3A6992", "#BB4430"],
                 **color_args,
                 title=wrapped_title,
                 text=df["Percentage"].apply(lambda x: f"{round(x, 1)}%"),
