@@ -100,42 +100,20 @@ class MatrixQuestion(Question):
 
             if not self.sub_map:
                 if self.value_map:
-                    mapped = responses.astype("Int64").map(self.value_map)
+                    if all(isinstance(k, int) for k in self.value_map):
+                        responses_numeric = pd.to_numeric(responses, errors="coerce")
+                        mapped = (
+                            responses_numeric.round()
+                            .astype("Int64")
+                            .map(self.value_map)
+                        )
+                    else:
+                        mapped = responses.map(self.value_map)
                 else:
                     mapped = responses
 
             sub_id = subcol.split("_")[-1]
 
-            """for respondent_id, value in mapped.dropna().items():
-                if self.question_id == "DE14":
-                    gender_label = self.get_parent_gender(respondent_id, sub_id)
-                    if gender_label and self.gender_lookup is not None:
-                        self.gender_lookup[(respondent_id, sub_id)] = gender_label
-                else:
-                    gender_label = (
-                        self.gender_lookup.get((respondent_id, sub_id))
-                        if self.gender_lookup
-                        else None
-                    )
-
-                if gender_label is None:
-                    if self.question_id == "DE14":
-                        gender_label = self.value_map.get(int(sub_id), None)
-                    else:
-                        # basically i need to read the answer to DE14 here
-                        # sub_id is the parent number
-                        # we need to get the answer to DE14_1 if sub_id is 1
-                        # and DE14_2 if sub_id is 2
-                        de14_resp = self.df.loc[respondent_id, f"DE14_{sub_id}"]
-                        gender_label = (
-                            "Woman"
-                            if de14_resp == 1
-                            else (
-                                "Man"
-                                if de14_resp == 2
-                                else "Non-binary person" if de14_resp == 3 else None
-                            )
-                        )"""
             for respondent_id, value in mapped.dropna().items():
                 if self.anchor_type == "parent_gender":
                     if self.question_id == "DE14":
@@ -270,9 +248,8 @@ class MatrixQuestion(Question):
         group_order = list(self.metadata.get("row_map", {}).values())
 
         label_lengths = [len(str(v)) for v in value_order]
-        long_labels = (
-            any(l > 13 for l in label_lengths)
-            or (sum(label_lengths) / len(label_lengths)) > 18
+        long_labels = any(l > 13 for l in label_lengths) or (
+            sum(label_lengths) / len(label_lengths) > 18 if label_lengths else False
         )
 
         xaxis_kwargs = {}

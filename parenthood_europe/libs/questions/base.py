@@ -90,50 +90,33 @@ class Question:
         self.yaxis_title = self.metadata.get("yaxis_title", "")
 
     def extract_columns(self):
-        self.subcolumns = sorted(
-            [
-                col
-                for col in self.df.columns
-                if isinstance(col, str)
-                and (col == self.question_id or col.startswith(f"{self.question_id}_"))
-            ]
-        )
+        self.subcolumns = []
+        self.text_columns = []
+        found_any = False
 
-        self.text_columns = sorted(
-            [
-                col
-                for col in self.df_raw.columns
-                if isinstance(col, str)
-                and col.startswith(f"{self.question_id}_")
-                and col.endswith("_TEXT")
-            ]
-        )
+        for col in self.df_raw.columns:
+            if col == self.question_id or col.startswith(f"{self.question_id}_"):
+                if col.endswith("_TEXT"):
+                    self.text_columns.append(col)
+                else:
+                    self.subcolumns.append(col)
+                found_any = True
+            elif found_any:
+                break
+
+        self.subcolumns.sort()
+        self.text_columns.sort()
 
         if self.subcolumns:
             self.question_text = self.extract_question_text(self.subcolumns[0])
         elif self.question_id in self.df_raw.columns:
             self.question_text = self.extract_question_text(self.question_id)
-
-        if self.question_text is None:
+        else:
             self.question_text = self.question_id
 
-        if self.subcolumns:
-            self.responses = (
-                self.df[self.subcolumns]
-                .apply(pd.to_numeric, errors="coerce")
-                .dropna(how="all")
-            )
-        else:
-            self.responses = None
-
-    """def get_labels(self, subcolumns):
-        labels = []
-        for col in subcolumns:
-            parsed = self.parse_column_id(col, self.question_id)
-            option_id = int(parsed["option_id"])
-            label = self.sub_map.get(option_id, col)
-            labels.append(label)
-        return labels"""
+        self.responses = (
+            self.df[self.subcolumns].dropna(how="all") if self.subcolumns else None
+        )
 
     def get_labels(self, subcolumns):
         labels = []
@@ -169,22 +152,6 @@ class Question:
         elif isinstance(self.responses, dict):
             return pd.concat(self.responses.values())
         return pd.Series([], dtype=float)
-
-    """def _choose_and_plot(self, labels, values, title, summary_stats=None):
-        if self.plot_type == "continuous":
-            return self._plot_histogram(values, title, summary_stats)
-
-        elif self.plot_type == "categorical":
-            if len(labels) < 4:
-                return self._plot_pie_distribution(labels, values, title)
-            else:
-                return self._plot_bar_distribution(labels, values, title, summary_stats)
-
-        elif self.plot_type == "average":
-            return self._plot_bar_distribution_avg(labels, values, title)
-
-        else:
-            raise ValueError(f"Unknown plot_type: {self.plot_type}")"""
 
     def _choose_and_plot(self, labels, values, title, summary_stats=None):
         truncated = self.truncate_after_first_period(title)
@@ -236,41 +203,13 @@ class Question:
 
     # wrap question title (numeric)
     @staticmethod
-    def wrap_text(text: str, width=90) -> str:
+    def wrap_text(text: str, width=100) -> str:
         return "<br>".join(textwrap.wrap(text, width=width))
 
     # wrap labels in case they're too long (single choice)
     @staticmethod
     def wrap_label(label, width=20):
         return "<br>".join(textwrap.wrap(label, width=width))
-
-    """def plot_distribution_from_counts(self, counts: pd.Series, title: str):
-    
-        #Plot pie if few options, else bar. Applies label mapping, wrapping, truncation.
-        
-        value_map = self.metadata.get("value_map", {})
-
-        # Sort counts descending
-        counts = counts.sort_values(ascending=False)
-
-        ordered_labels = []
-        ordered_values = []
-
-        for key in counts.index:
-            label = value_map.get(key, key)  # fallback to raw key if mapping missing
-            ordered_labels.append(label)
-            ordered_values.append(counts[key])
-
-        if len(ordered_labels) < 3:
-            return self._plot_pie_distribution(ordered_labels, ordered_values, title)
-        else:
-            wrapped_labels = [self.wrap_label(lbl, width=20) for lbl in ordered_labels]
-            fig = self._plot_bar_distribution(ordered_labels, ordered_values, title)
-            if fig is not None:
-                fig.update_xaxes(
-                    tickvals=ordered_labels, ticktext=wrapped_labels, automargin=True
-                )
-            return fig"""
 
     def get_ordered_labels_and_values(
         self, counts: pd.Series
@@ -287,77 +226,6 @@ class Question:
             ordered_values.append(counts[key])
 
         return ordered_labels, ordered_values
-
-    """def _plot_bar_distribution(self, labels, values, title, summary_stats=None):
-        truncated = self.truncate_after_first_period(title)
-        wrapped_title = self.wrap_text(truncated, width=80)
-
-        total = sum(values)
-        if total == 0:
-            print(
-                f"[Warning] Skipping plot for question '{self.question_id}': no responses."
-            )
-            return None
-
-        percentages = [(v / total) * 100 for v in values]
-        raw_counts = [total * (p / 100) for p in percentages]
-        customdata = [int(round(v)) for v in raw_counts]
-
-        # Sort descending by percentage
-        sorted_data = sorted(
-            zip(percentages, labels, values, customdata),
-            key=lambda x: x[0],
-            reverse=True,
-        )
-        percentages, labels, values, customdata = zip(*sorted_data)
-
-        use_horizontal = len(labels) > 7
-
-        wrapped_labels = [self.wrap_label(label, width=20) for label in labels]
-
-        if use_horizontal:
-            fig = px.bar(
-                y=wrapped_labels,
-                x=percentages,
-                orientation="h",
-                title=wrapped_title,
-                text=[f"{round(p, 1)} %" for p in percentages],
-                hover_data=None,
-                category_orders={"y": list(wrapped_labels)},
-            )
-
-            fig.update_layout(
-                width=1000,
-                height=max(600, 30 * len(labels)),
-                margin=dict(r=200),
-                xaxis_title="Percentage (%)",
-                yaxis_title="",
-            )
-        else:
-            fig = px.bar(
-                x=labels,
-                y=percentages,
-                title=wrapped_title,
-                text=[f"{round(p, 1)} %" for p in percentages],
-                hover_data=None,
-            )
-            fig.update_layout(
-                width=1000,
-                height=500,
-                margin=dict(r=200),
-                xaxis_title="",
-                yaxis_title="Percentage (%)",
-            )
-
-        fig.update_traces(
-            customdata=customdata,
-            hovertemplate="Total responses: %{customdata}<extra></extra>",
-            marker_color="#4876AE",
-            marker_line_color=None,
-            marker_line_width=1,
-        )
-
-        return fig"""
 
     def _plot_bar_distribution(
         self, labels, values, title, summary_stats=None, orientation="v"
@@ -428,90 +296,6 @@ class Question:
 
         return fig
 
-    """   if summary_stats:
-            fig.add_annotation(
-                text=(
-                    f"<b>Min:</b> {summary_stats['Min']:.0f}<br>"
-                    f"<b>Mean:</b> {summary_stats['Mean']:.0f}<br>"
-                    f"<b>Median:</b> {summary_stats['Median']:.0f}<br>"
-                    f"<b>Total Responses:</b> {summary_stats['Total Responses']}"
-                ),
-                x=1.05,
-                y=0.5,
-                xref="paper",
-                yref="paper",
-                showarrow=False,
-                align="left",
-                bordercolor="black",
-                borderwidth=1,
-                xanchor="left",
-                yanchor="middle",
-            )
-
-        return fig"""
-
-    """def _plot_histogram(self, values, title, summary_stats=None):
-        values = pd.to_numeric(pd.Series(values), errors="coerce").dropna()
-        truncated = self.truncate_after_first_period(title)
-        wrapped_title = self.wrap_text(truncated, width=60)
-
-        counts, bin_edges = np.histogram(values, bins="auto")
-        percentages = counts / counts.sum() * 100
-        bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2
-
-        fig = px.histogram(
-            x=values,
-            title=wrapped_title,
-            histnorm="percent",
-            nbins=None,
-            range_x=[values.min() - 0.5, values.max() + 0.5],
-        )
-
-        if fig.data and fig.data[0].y is not None:
-            actual_percents = fig.data[0].y
-            total_count = len(values)
-            customdata = [
-                int(round(pct * total_count / 100)) for pct in actual_percents
-            ]
-        else:
-            customdata = []
-
-        fig.update_traces(
-            marker_color="#4876AE",
-            marker_line_color="black",
-            marker_line_width=1,
-            customdata=customdata,
-            hovertemplate="Total responses: %{customdata}<extra></extra>",
-        )
-        fig.update_layout(
-            width=1000,
-            height=500,
-            margin=dict(r=200),
-            xaxis_title="",
-            yaxis_title="Percentage (%)",
-        )
-
-        if summary_stats:
-            fig.add_annotation(
-                text=(
-                    f"<b>Min:</b> {summary_stats['Min']:.0f}<br>"
-                    f"<b>Mean:</b> {summary_stats['Mean']:.0f}<br>"
-                    f"<b>Median:</b> {summary_stats['Median']:.0f}<br>"
-                    f"<b>Total Responses:</b> {summary_stats['Total Responses']}"
-                ),
-                x=1.05,
-                y=0.5,
-                xref="paper",
-                yref="paper",
-                showarrow=False,
-                align="left",
-                bordercolor="black",
-                borderwidth=1,
-                xanchor="left",
-                yanchor="middle",
-            )
-        return fig"""
-
     def _plot_histogram(self, values, title, summary_stats=None):
         values = pd.to_numeric(pd.Series(values), errors="coerce").dropna()
         truncated = self.truncate_after_first_period(title)
@@ -551,27 +335,6 @@ class Question:
             xaxis_title=self.metadata.get("x_label", "Value"),
             yaxis_title="Percentage (%)",
         )
-
-        """if summary_stats:
-            fig.add_annotation(
-                text=(
-                    f"<b>Min:</b> {summary_stats['Min']:.0f}<br>"
-                    f"<b>Mean:</b> {summary_stats['Mean']:.0f}<br>"
-                    f"<b>Median:</b> {summary_stats['Median']:.0f}<br>"
-                    f"<b>Total Responses:</b> {summary_stats['Total Responses']}"
-                ),
-                x=1.05,
-                y=0.5,
-                xref="paper",
-                yref="paper",
-                showarrow=False,
-                align="left",
-                bordercolor="black",
-                borderwidth=1,
-                xanchor="left",
-                yanchor="middle",
-            )"""
-
         return fig
 
     def get_mean_std_per_subcolumn(self) -> tuple[list[str], list[float], list[float]]:
@@ -590,7 +353,7 @@ class Question:
             y=values,
             error_y=error_y,
             text=[f"{v:.1f} h" for v in values],
-            title=self.wrap_text(title),
+            title=title,
             hover_data=None,
         )
         try:
@@ -620,7 +383,7 @@ class Question:
         )
 
         fig.update_layout(
-            title=self.wrap_text(self.truncate_after_first_period(title)),
+            title=title,
             width=1000,
             height=500,
             margin=dict(t=80, b=120),

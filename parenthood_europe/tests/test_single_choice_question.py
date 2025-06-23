@@ -1,8 +1,10 @@
 import pandas as pd
-from libs.survey_analysis import SingleChoiceQuestion  
+import libs
+from libs.questions.single_choice import SingleChoiceQuestion
 from libs.transform_time import unified_time_to_weeks
 
 # multiple testcases
+
 
 def test_de7_single_choice_position():
     text_question = SingleChoiceQuestion(
@@ -10,8 +12,8 @@ def test_de7_single_choice_position():
         question_text="What's your current position?",
         responses=[
             "I am tenured (please, indicate the year you received tenure, e.g., 2010)",
-            "2015"
-        ]
+            "2015",
+        ],
         # custom_responses=["A mix of them all"]  # Uncomment if needed
     )
     print(text_question)
@@ -26,7 +28,7 @@ def test_de8_academic_status_with_extras():
         "DE6": ["42"],  # Current residence
         "DE8": ["5"],  # Academic status: tenure
         "DE8_4_TEXT": ["2015"],  # Extra field for tenure year
-        "DE8_5_TEXT": ["Independent researcher"]  # Extra field for "Other"
+        "DE8_5_TEXT": ["Independent researcher"],  # Extra field for "Other"
     }
 
     df = pd.DataFrame(data)
@@ -36,7 +38,7 @@ def test_de8_academic_status_with_extras():
         question_id="DE8",
         question_text="What is your current academic status?",
         df=df,
-        response_id=response_id
+        response_id=response_id,
     )
 
     print(text_question)
@@ -56,19 +58,18 @@ def test_de14_gender_identity():
         question_id="DE13_1",
         question_text="What is the gender identity of Parent 1?",
         df=df,
-        response_id=response_id
+        response_id=response_id,
     )
 
     parent2_question = SingleChoiceQuestion(
         question_id="DE13_2",
         question_text="What is the gender identity of Parent 2?",
         df=df,
-        response_id=response_id
+        response_id=response_id,
     )
 
     print(parent1_question)
     print(parent2_question)
-
 
 
 def test_de15_de16_parent_categories():
@@ -85,19 +86,18 @@ def test_de15_de16_parent_categories():
         question_id="DE14_1",
         question_text="Which category best describes Parent 1?",
         df=df,
-        response_id=response_id
+        response_id=response_id,
     )
 
     parent2_question = SingleChoiceQuestion(
         question_id="DE14_2",
         question_text="Which category best describes Parent 2?",
         df=df,
-        response_id=response_id
+        response_id=response_id,
     )
 
     print(parent1_question)
     print(parent2_question)
-
 
 
 def test_de8_single_choice_with_extra_texts():
@@ -149,7 +149,6 @@ def test_de13_single_choice_two_parents():
     print(parent2_question)
 
 
-
 def test_de14_category_description_parents():
     data = {
         "responseId": ["R_123456"],
@@ -182,7 +181,7 @@ def test_de18_partner_occupation_other():
     data = {
         "responseId": ["R_123456"],
         "DE16": [9],  # Respondent selected "Other"
-        "DE16_8_TEXT": ["Freelance consultant"]  # Custom text response
+        "DE16_8_TEXT": ["Freelance consultant"],  # Custom text response
     }
     df = pd.DataFrame(data)
     response_id = "R_123456"
@@ -191,11 +190,10 @@ def test_de18_partner_occupation_other():
         question_id="DE16",
         question_text="What is the primary occupation of your partner/spouse?",
         df=df,
-        response_id=response_id
+        response_id=response_id,
     )
 
     print(partner_occupation_question)
-
 
 
 def test_de20_de21_partner_phd_and_income():
@@ -211,26 +209,27 @@ def test_de20_de21_partner_phd_and_income():
         question_id="DE20",
         question_text="Does your partner/spouse hold a PhD. or doctorate degree?",
         df=df,
-        response_id=response_id
+        response_id=response_id,
     )
 
     income_question = SingleChoiceQuestion(
         question_id="DE21",
         question_text="Does your partner/spouse earn more than you?",
         df=df,
-        response_id=response_id
+        response_id=response_id,
     )
 
     print(phd_question)
     print(income_question)
 
 
-
 def test_pl3_ideal_parental_leave():
     data = {
         "responseId": ["R_987654"],
         "PL3": ["3"],  # Selected: "Teaching and service relief"
-        "PL3_5_TEXT": ["Something flexible, depending on the semester"]  # Extra text (likely for option "5")
+        "PL3_5_TEXT": [
+            "Something flexible, depending on the semester"
+        ],  # Extra text (likely for option "5")
     }
 
     df = pd.DataFrame(data)
@@ -241,7 +240,7 @@ def test_pl3_ideal_parental_leave():
         "2": "Teaching relief only",
         "3": "Teaching and service relief",
         "4": "Full relief of duties",
-        "5": "Other"
+        "5": "Other",
     }
 
     ideal_leave_question = SingleChoiceQuestion(
@@ -255,12 +254,11 @@ def test_pl3_ideal_parental_leave():
     print(ideal_leave_question)
 
 
-
 def test_pl5_unpaid_parental_leave():
     data = {
         "responseId": ["R_987654"],
         "PL5": ["4"],  # Selected: "Something else"
-        "PL5_4_TEXT": ["Depends on institutional norms and family structure."]
+        "PL5_4_TEXT": ["Depends on institutional norms and family structure."],
     }
 
     df = pd.DataFrame(data)
@@ -270,7 +268,7 @@ def test_pl5_unpaid_parental_leave():
         "1": "Men and women should be offered the same unpaid parental leave",
         "2": "Women should get more",
         "3": "Men should get more",
-        "4": "Something else (please, elaborate more on this answer)"
+        "4": "Something else (please, elaborate more on this answer)",
     }
 
     unpaid_leave_question = SingleChoiceQuestion(
@@ -284,13 +282,11 @@ def test_pl5_unpaid_parental_leave():
     print(unpaid_leave_question)
 
 
-
-
 def test_pl8_tenure_clock_stop_conversion():
     data = {
         "responseId": ["R_112233"],
-        "PL8": ["3"],                  # Selected: Yes, enter years
-        "PL8_3_TEXT": ["1.5"]          # Entered value: 1.5 years
+        "PL8": ["3"],  # Selected: Yes, enter years
+        "PL8_3_TEXT": ["1.5"],  # Entered value: 1.5 years
     }
 
     df = pd.DataFrame(data)
@@ -300,7 +296,7 @@ def test_pl8_tenure_clock_stop_conversion():
         "1": "No",
         "2": "Yes, but don't know how long",
         "3": "Yes (please, enter how many years per child in numeric digits)",
-        "4": "Don't know"
+        "4": "Don't know",
     }
 
     tenure_stop_question = SingleChoiceQuestion(
@@ -310,12 +306,10 @@ def test_pl8_tenure_clock_stop_conversion():
         response_id=response_id,
         value_map=value_map,
         value_transform=unified_time_to_weeks,
-        unit_hint="year"
+        unit_hint="year",
     )
 
     print(tenure_stop_question)
-
-
 
 
 def test_pl10_single_choice_parental_support():
@@ -341,7 +335,7 @@ def test_pl10_single_choice_parental_support():
         question_id="PL10",
         question_text=(
             'Overall, is the "parental leave" support offered by your current institution '
-            'better than the minimum required by law in the country?'
+            "better than the minimum required by law in the country?"
         ),
         df=df,
         response_id=response_id,
@@ -351,12 +345,8 @@ def test_pl10_single_choice_parental_support():
     print(question)
 
 
-
 def test_cs2_single_choice_childcare_support():
-    data = {
-        "responseId": ["R_7891011"],
-        "CS2": [4]  # e.g., "Don't know"
-    }
+    data = {"responseId": ["R_7891011"], "CS2": [4]}  # e.g., "Don't know"
 
     df = pd.DataFrame(data)
     response_id = "R_7891011"
@@ -366,7 +356,7 @@ def test_cs2_single_choice_childcare_support():
         1: "Yes, much better",
         2: "Yes, slightly better",
         3: "Just the bare minimum",
-        4: "Don't know"
+        4: "Don't know",
     }
 
     # Instantiate the question
@@ -375,12 +365,10 @@ def test_cs2_single_choice_childcare_support():
         question_text="Overall, is the 'childcare' support offered by your current institution better than the minimum required by law in the country?",
         df=df,
         response_id=response_id,
-        answer_mapping=answer_mapping
+        answer_mapping=answer_mapping,
     )
 
     print(cs2_question)
-
-
 
 
 if __name__ == "__main__":
@@ -395,7 +383,3 @@ if __name__ == "__main__":
     test_pl8_tenure_clock_stop_conversion()
     test_pl10_single_choice_parental_support()
     test_cs2_single_choice_childcare_support()
-
-
-
-    

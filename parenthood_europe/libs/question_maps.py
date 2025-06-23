@@ -633,10 +633,10 @@ PL2 = {
     "sub_map": {1: "Weeks", 2: "Months", 3: "Quarters", 4: "Semesters"},
     "value_map": {
         "min_value": 0,
-        "max_value": 52,  # Optional, assume 1 year max unless data shows otherwise
+        "max_value": 52,
     },
+    "value_transform": unified_time_to_weeks,
 }
-
 
 PL3 = {
     "plot_type": "categorical",
