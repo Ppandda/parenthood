@@ -4,6 +4,7 @@ import numpy as np
 import plotly.express as px
 from typing import Optional
 from transform_time import unified_time_to_weeks
+import question_maps
 
 
 def auto_bin_grouped_df(df, value_col="Value", group_col="Group"):
@@ -37,15 +38,14 @@ class MatrixQuestion(Question):
         self,
         question_id,
         df,
-        df_raw,
+        meta: dict[str, dict],
         value_transform=None,
         gender_lookup=None,
         **kwargs,
     ):
-        super().__init__(question_id, df, df_raw, value_transform)
+        super().__init__(question_id, df, meta, value_transform)
 
         self.df.index = self.df.index.astype(int)
-        self.df_raw.index = self.df_raw.index.astype(int)
 
         self.extract_columns()
         self.gender_lookup = gender_lookup
@@ -60,18 +60,17 @@ class MatrixQuestion(Question):
         """
         Given a respondent and whether it's parent 1 or 2, fetch the gender label.
         """
-        gender_question_id = (
-            "DE14"  # hardcoded because we know this special logic only applies to DE14
-        )
-        gender_column = f"{gender_question_id}_{parent_number}"
+        gender_col = f"DE14_{parent_number}"
         try:
-            gender_code = self.df_raw.at[respondent_id, gender_column]
-            if pd.isna(gender_code):
-                return None
-            gender_label = self.metadata.get("value_map", {}).get(int(gender_code))
-
-            return gender_label
+            code = self.df.at[respondent_id, gender_col]
         except KeyError:
+            return None
+        if pd.isna(code):
+            return None
+        try:
+            de14_meta = getattr(question_maps, "DE14")
+            return de14_meta.get("value_map", {}).get(int(code))
+        except Exception:
             return None
 
     def normalize_units(self, responses: pd.Series, subcol: str) -> pd.Series:
@@ -106,36 +105,6 @@ class MatrixQuestion(Question):
 
             sub_id = subcol.split("_")[-1]
 
-            """for respondent_id, value in mapped.dropna().items():
-                if self.question_id == "DE14":
-                    gender_label = self.get_parent_gender(respondent_id, sub_id)
-                    if gender_label and self.gender_lookup is not None:
-                        self.gender_lookup[(respondent_id, sub_id)] = gender_label
-                else:
-                    gender_label = (
-                        self.gender_lookup.get((respondent_id, sub_id))
-                        if self.gender_lookup
-                        else None
-                    )
-
-                if gender_label is None:
-                    if self.question_id == "DE14":
-                        gender_label = self.value_map.get(int(sub_id), None)
-                    else:
-                        # basically i need to read the answer to DE14 here
-                        # sub_id is the parent number
-                        # we need to get the answer to DE14_1 if sub_id is 1
-                        # and DE14_2 if sub_id is 2
-                        de14_resp = self.df.loc[respondent_id, f"DE14_{sub_id}"]
-                        gender_label = (
-                            "Woman"
-                            if de14_resp == 1
-                            else (
-                                "Man"
-                                if de14_resp == 2
-                                else "Non-binary person" if de14_resp == 3 else None
-                            )
-                        )"""
             for respondent_id, value in mapped.dropna().items():
                 if self.anchor_type == "parent_gender":
                     if self.question_id == "DE14":
@@ -180,21 +149,7 @@ class MatrixQuestion(Question):
                         int(sub_id), f"{self.question_id}_{sub_id}"
                     )
                     value_label = self.value_map.get(value, value)
-                    # else:
-                    # anchor_type == "none"
-                    #   group_label = self.value_map.get(value, value)
-                    #  value_label = self.sub_map.get(
-                    #     f"{self.question_id}_{sub_id}", f"{self.question_id}_{sub_id}"
-                    # )
 
-                    """data.append(
-                        {
-                            "Group": gender_label,
-                            "Value": value if self.question_id != "DE14" else gender_label,
-                            "Count": 1,
-                            "Percentage": 100,
-                        }
-                    )"""
                 data.append(
                     {
                         "Group": group_label,
