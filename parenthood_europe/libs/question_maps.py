@@ -571,9 +571,7 @@ DE22 = {
 # DE23 – matrix about child birth years and countries
 DE23 = {
     "row_map": {
-        str(
-            i
-        ): f"{i}{'st' if i == 1 else 'nd' if i == 2 else 'rd' if i == 3 else 'th'} child"
+        i: f"{i}{'st' if i == 1 else 'nd' if i == 2 else 'rd' if i == 3 else 'th'} child"
         for i in range(1, 11)
     },
     "sub_map": {1: "Year (YYYY)", 2: "Country"},

@@ -28,12 +28,12 @@ class Question:
         self,
         question_id: str,
         df: pd.DataFrame,
-        meta: dict[str, dict],
+        df_raw: pd.DataFrame,
         value_transform: Callable[[Any], Any] = None,
     ):
         self.question_id = question_id  # e.g., "Q1", "Q2"
         self.df = df
-        self.meta = meta
+        self.df_raw = df_raw
         self.value_transform = value_transform
         self.question_text = None
         self.get_mappings()
@@ -94,7 +94,7 @@ class Question:
         self.text_columns = []
         found_any = False
 
-        for col in self.df.columns:
+        for col in self.df_raw.columns:
             if col == self.question_id or col.startswith(f"{self.question_id}_"):
                 if col.endswith("_TEXT"):
                     self.text_columns.append(col)
@@ -107,24 +107,16 @@ class Question:
         self.subcolumns.sort()
         self.text_columns.sort()
 
-        candidate_col = self.subcolumns[0] if self.subcolumns else self.question_id
-        self.question_text = (
-            self._column_question_text(candidate_col) or self.question_id
-        )
+        if self.subcolumns:
+            self.question_text = self.extract_question_text(self.subcolumns[0])
+        elif self.question_id in self.df_raw.columns:
+            self.question_text = self.extract_question_text(self.question_id)
+        else:
+            self.question_text = self.question_id
 
         self.responses = (
             self.df[self.subcolumns].dropna(how="all") if self.subcolumns else None
         )
-
-    def _column_question_text(self, col):
-        return self.meta.get(col, {})
-
-    @staticmethod
-    def _parse_column_id(col: str, question_id: str) -> dict[str, Any]:
-        remainder = col.replace(question_id + "_", "")
-        is_text = remainder.endswith("_TEXT")
-        option_id = remainder.replace("_TEXT", "")
-        return {"question_id": question_id, "option_id": option_id, "is_text": is_text}
 
     def get_labels(self, subcolumns):
         labels = []
