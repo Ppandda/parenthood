@@ -5,6 +5,19 @@ import plotly.express as px
 from typing import Optional
 from transform_time import unified_time_to_weeks
 import question_maps
+from question_maps import DE5 as _COUNTRY_MAP
+import country_converter as coco
+
+cc = coco.CountryConverter()
+
+YEAR_ZERO = 2025
+
+
+def _country_code_to_label(code: int, *, to_region: bool = False) -> str:
+    """Translate numeric country code to country name or region label."""
+    name = _COUNTRY_MAP["value_map"].get(int(code), str(code))
+    region = cc.convert(names=name, to="Continent", not_found=None)
+    return region or name
 
 
 def auto_bin_grouped_df(df, value_col="Value", group_col="Group"):
@@ -90,6 +103,80 @@ class MatrixQuestion(Question):
                 f"[Warning] Skipping plot for question '{self.question_id}': no subcolumns."
             )
             return None
+
+        if self.question_id == "DE23":
+            data = []
+
+            # Every child has two sub-columns: “…_<child>_1” (year) and “…_<child>_2” (country)
+            for child_id in self.row_map:  # 1 … 10
+                col_year = f"{self.question_id}_{child_id}_1"
+                col_country = f"{self.question_id}_{child_id}_2"
+                if (
+                    col_year not in self.df.columns
+                    or col_country not in self.df.columns
+                ):
+                    continue
+
+                yrs = self.df[col_year].dropna()
+                for respondent_id, year in yrs.items():
+                    year = (
+                        YEAR_ZERO - int(year) if pd.notna(year) else 0
+                    )  # 0 should be seen as an outlier
+                    country_code = self.df.at[respondent_id, col_country]
+                    if pd.isna(country_code):
+                        continue  # no country ⇒ skip point
+
+                    group_lbl = _country_code_to_label(
+                        country_code, to_region=True
+                    )  # flip to_region=True if you prefer buckets
+                    data.append(
+                        dict(
+                            Group=group_lbl,
+                            Value=int(year),  # numeric year; will be binned below
+                            Count=1,
+                            Percentage=100,
+                        )
+                    )
+
+            if not data:
+                return None
+
+            df_data = pd.DataFrame(data)
+
+            # standard → percentage within each country/region
+            df_data = (
+                df_data.groupby(["Group", "Value"])
+                .agg(Count=("Count", "sum"))
+                .reset_index()
+            )
+            df_data["Percentage"] = df_data.groupby("Group")["Count"].transform(
+                lambda x: 100 * x / x.sum()
+            )
+
+            # ===  decade buckets  ====================================================
+            # Drop this block if you prefer Plotly's auto-bins
+            df_data["Bin_Label"] = (
+                (df_data["Value"] // 10 * 10).astype(int).astype(str)
+                + "–"
+                + ((df_data["Value"] // 10 * 10) + 9).astype(int).astype(str)
+            )
+            df_data["Value"] = df_data[
+                "Bin_Label"
+            ]  # overwrite so the call below is unchanged
+            # ========================================================================
+
+            # Re-use the existing bar-plot helper; it only needs ‘Value’, ‘Group’, ‘Percentage’
+            fig = self._plot_grouped_bar_distribution(
+                df_data,
+                self.question_text,
+                value_key="Value",
+                group_key="Group",
+            )
+            fig.update_traces(text=None)
+            fig.update_traces(marker_pattern_shape="")
+            if display and fig is not None:
+                fig.show()
+            return fig
 
         data = []
 
