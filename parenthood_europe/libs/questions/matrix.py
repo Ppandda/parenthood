@@ -3,7 +3,7 @@ import pandas as pd
 import numpy as np
 import plotly.express as px
 from typing import Optional
-from transform_time import unified_time_to_weeks
+from transform_time import unified_time_to_weeks, unified_time_to_months
 import question_maps
 from question_maps import DE5 as _COUNTRY_MAP
 import country_converter as coco
@@ -92,7 +92,7 @@ class MatrixQuestion(Question):
             try:
                 unit_code = subcol.split("_")[-1]
                 unit_label = self.sub_map.get(int(unit_code), unit_code)
-                return responses.apply(lambda v: unified_time_to_weeks(v, unit_label))
+                return responses.apply(lambda v: unified_time_to_months(v, unit_label))
             except Exception as e:
                 print(f"[Warning] Failed to normalize time in {subcol}: {e}")
         return responses
@@ -184,11 +184,21 @@ class MatrixQuestion(Question):
             responses = self.responses[subcol].dropna()
             mapped = self.normalize_units(responses, subcol)
 
-            if not self.sub_map:
-                if self.value_map:
-                    mapped = responses.astype("Int64").map(self.value_map)
-                else:
-                    mapped = responses
+            if (
+                self.value_map
+                and isinstance(self.value_map, dict)
+                and all(isinstance(k, int) for k in self.value_map)
+            ):
+                try:
+                    mapped = mapped.astype("Int64").map(self.value_map)
+                except Exception:
+                    pass
+
+            # if not self.sub_map:
+            #   if self.value_map:
+            #      mapped = responses.astype("Int64").map(self.value_map)
+            # else:
+            #    mapped = responses
 
             sub_id = subcol.split("_")[-1]
 
@@ -257,14 +267,6 @@ class MatrixQuestion(Question):
             .reset_index()
         )
 
-        """# if self.question_id == "DE14":
-        if self.anchor_type == "parent_gender":
-            grouped["Percentage"] = 100 * grouped["Count"] / grouped["Count"].sum()
-        else:
-            grouped["Percentage"] = grouped.groupby("Group")["Count"].transform(
-                lambda x: 100 * x / x.sum()
-            )"""
-
         if self.anchor_type == "parent_gender":
             grouped["Percentage"] = (
                 0
@@ -283,9 +285,15 @@ class MatrixQuestion(Question):
 
         # Automatically bin values if question is numeric and continuous
         if pd.api.types.is_numeric_dtype(grouped["Value"]):
-            grouped, bin_edges = auto_bin_grouped_df(
-                grouped, value_col="Value", group_col=self.grouping_key
+            grouped = grouped.copy()
+            grouped["Value"] = grouped["Value"].clip(upper=60)
+
+            bin_edges = [0, 3, 6, 9, 12, 18, 24, 36, 48, 60]
+            bin_labels = [f"{a}-{b}" for a, b in zip(bin_edges[:-1], bin_edges[1:])]
+            grouped["Bin_Label"] = pd.cut(
+                grouped["Value"], bins=bin_edges, labels=bin_labels, right=False
             )
+
             value_key = "Bin_Label"
         else:
             value_key = "Value"

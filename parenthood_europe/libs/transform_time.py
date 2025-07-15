@@ -30,3 +30,24 @@ def unified_time_to_weeks(value, unit_code):
         return round(value * factor_map.get(str(unit_code_str, 1).lower(), 1))
     except:
         return value
+
+
+def unified_time_to_months(value, unit_code):
+    try:
+        value = float(value)
+        unit_code_str = str(unit_code).lower()
+        factor_map = {
+            "week": 1 / 4.345,
+            "month": 1,
+            "quarter": 3,
+            "semester": 6,
+            "year": 12,
+            # optionally keep int keys too
+            "1": 1 / 4.345,
+            "2": 1,
+            "3": 3,
+            "4": 6,
+        }
+        return round(value * factor_map.get(unit_code_str, 1), 2)
+    except:
+        return value

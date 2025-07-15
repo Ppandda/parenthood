@@ -305,7 +305,7 @@ def test_pl8_tenure_clock_stop_conversion():
         df=df,
         response_id=response_id,
         value_map=value_map,
-        value_transform=unified_time_to_weeks,
+        # value_transform=unified_time_to_weeks,
         unit_hint="year",
     )
 
