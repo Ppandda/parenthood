@@ -1,4 +1,4 @@
-from libs.transform_time import unified_time_to_weeks
+from libs.transform_time import unified_time_to_weeks, unified_time_to_months
 
 # DE1 numeric
 DE1 = {
@@ -633,7 +633,7 @@ PL2 = {
         "min_value": 0,
         "max_value": 52,
     },
-    "value_transform": unified_time_to_weeks,
+    "value_transform": unified_time_to_months,
 }
 
 PL3 = {
