@@ -261,11 +261,75 @@ class MatrixQuestion(Question):
 
         df_data = pd.DataFrame(data)
 
+        # Optional: clip extreme outliers or typos
+        # Reasonable bins for duration-type questions
+        # --- Custom binning for known duration-based questions like PL2 ---
+        if self.question_id == "PL2":
+            df_data["Value"] = df_data["Value"].clip(lower=0, upper=60)
+
+            bin_edges = [
+                0,
+                1,
+                2,
+                3,
+                4,
+                5,
+                6,
+                7,
+                8,
+                12,
+                24,
+                36,
+                48,
+                60,
+                float("inf"),
+            ]
+            bin_labels = [
+                "0–1",
+                "2",
+                "3",
+                "4",
+                "5",
+                "6",
+                "7",
+                "8",
+                "9–12",
+                "13–24",
+                "25–36",
+                "37–48",
+                "49–60",
+                "61+",
+            ]
+
+            df_data["Bin_Label"] = pd.cut(
+                df_data["Value"], bins=bin_edges, labels=bin_labels, right=False
+            )
+
+            df_data = df_data[df_data["Bin_Label"].notna()]
+
+        # --- Generic fallback for other numeric questions ---
+        else:
+            try:
+                df_data["Bin_Label"] = pd.qcut(
+                    df_data["Value"], q=8, duplicates="drop"
+                ).astype(str)
+            except ValueError:
+                df_data["Bin_Label"] = pd.cut(df_data["Value"], bins=4).astype(str)
+
+        # --- Grouping for both cases ---
         grouped = (
-            df_data.groupby(["Group", "Value"])
+            df_data.groupby(["Group", "Bin_Label"])
             .agg(Count=("Count", "sum"))
             .reset_index()
         )
+
+        value_key = "Bin_Label"
+
+        """ grouped = (
+            df_data.groupby(["Group", "Value"])
+            .agg(Count=("Count", "sum"))
+            .reset_index()
+        )"""
 
         if self.anchor_type == "parent_gender":
             grouped["Percentage"] = (
@@ -284,7 +348,7 @@ class MatrixQuestion(Question):
             )
 
         # Automatically bin values if question is numeric and continuous
-        if pd.api.types.is_numeric_dtype(grouped["Value"]):
+        """if pd.api.types.is_numeric_dtype(grouped["Value"]):
             grouped = grouped.copy()
             grouped["Value"] = grouped["Value"].clip(upper=60)
 
@@ -296,7 +360,7 @@ class MatrixQuestion(Question):
 
             value_key = "Bin_Label"
         else:
-            value_key = "Value"
+            value_key = "Value"""
 
         fig = self._plot_grouped_bar_distribution(
             grouped,
@@ -304,6 +368,9 @@ class MatrixQuestion(Question):
             value_key=value_key,
             group_key=self.grouping_key,
         )
+
+        if self.question_id == "PL2":
+            fig.update_layout(xaxis_title="Months")
 
         if display and fig is not None:
             fig.show()
