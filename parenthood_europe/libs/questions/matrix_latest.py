@@ -314,6 +314,8 @@ class MatrixQuestion(Question):
             .reset_index()
         )
 
+        value_key = "Bin_Label"
+
         """ grouped = (
             df_data.groupby(["Group", "Value"])
             .agg(Count=("Count", "sum"))
@@ -350,8 +352,6 @@ class MatrixQuestion(Question):
             value_key = "Bin_Label"
         else:
             value_key = "Value"""
-
-        value_key = "Bin_Label"
 
         fig = self._plot_grouped_bar_distribution(
             grouped,
@@ -428,9 +428,9 @@ class MatrixQuestion(Question):
             df["BarWidth"] = 0.6
             fig = px.bar(
                 df,
-                x=value_key,
+                x="Value",
                 y="Percentage",
-                color=value_key,
+                color="Value",
                 title=wrapped_title,
                 text=df["Percentage"].apply(lambda x: f"{round(x, 1)}%"),
                 hover_data=["Count"],
