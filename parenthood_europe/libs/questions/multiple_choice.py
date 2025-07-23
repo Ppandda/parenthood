@@ -12,10 +12,10 @@ class MultipleChoiceQuestion(Question):
         self,
         question_id: str,
         df: pd.DataFrame,
-        df_raw: pd.DataFrame,
+        meta: dict[str, dict],
         value_transform=None,
     ):
-        super().__init__(question_id, df, df_raw, value_transform)
+        super().__init__(question_id, df, meta, value_transform)
         self.extract_columns()
 
     def extract_columns(self):
