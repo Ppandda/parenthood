@@ -175,8 +175,10 @@ class MatrixQuestion(Question):
                 .agg(Count=("Count", "sum"))
                 .reset_index()
             )
-            df_data["Percentage"] = df_data.groupby("Group")["Count"].transform(
-                lambda x: 100 * x / x.sum()
+            df_data["Percentage"] = (
+                100
+                * df_data["Count"]
+                / df_data.groupby("Value")["Count"].transform("sum")
             )
 
             # ========================================================================
@@ -312,6 +314,12 @@ class MatrixQuestion(Question):
             df_data.groupby(["Group", "Bin_Label"])
             .agg(Count=("Count", "sum"))
             .reset_index()
+        )
+
+        grouped["Percentage"] = (
+            100
+            * grouped["Count"]
+            / grouped.groupby("Bin_Label")["Count"].transform("sum")
         )
 
         """ grouped = (
