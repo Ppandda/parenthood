@@ -290,7 +290,8 @@ class Question:
 
         fig.update_layout(
             width=1000,
-            height=max(600, 30 * len(labels)) if orientation == "h" else 500,
+            # height=max(600, 30 * len(labels)) if orientation == "h" else 500,
+            height=500,
             margin=dict(r=200),
             xaxis_title="Percentage (%)" if orientation == "h" else "",
             yaxis_title="" if orientation == "h" else "Percentage (%)",
