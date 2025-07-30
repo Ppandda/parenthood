@@ -161,7 +161,30 @@ class Question:
             return pd.concat(self.responses.values())
         return pd.Series([], dtype=float)
 
-    def _choose_and_plot(self, labels, values, title, summary_stats=None):
+    def as_frame(self) -> pd.DataFrame:
+        """
+        Return a tidy DataFrame with at least:
+        - ResponseId : respondent key
+        - value      : the interpreted answer
+        Subclasses may append extra columns (row, unit, etc.).
+        Rows with missing data are omitted.
+        """
+        if "ResponseId" not in self.df.columns:
+            raise KeyError("DataFrame must contain a 'ResponseId' column")
+
+        series = self.get_combined_responses()
+        if series.empty:
+            return pd.DataFrame(columns=["ResponseId", "value"])
+
+        resp_ids = self.df.loc[series.index, "ResponseId"].values
+        out = (
+            pd.DataFrame({"ResponseId": resp_ids, "value": series.values})
+            .dropna(subset=["value"])
+            .reset_index(drop=True)
+        )
+        return out
+
+    """def _choose_and_plot(self, labels, values, title, summary_stats=None):
         truncated = self.truncate_after_first_period(title)
         wrapped_title = self.wrap_text(truncated, width=80)
 
@@ -198,7 +221,7 @@ class Question:
                 )
 
         else:
-            raise ValueError(f"Unknown plot_type: {self.plot_type}")
+            raise ValueError(f"Unknown plot_type: {self.plot_type}")"""
 
     # cutoff question title if too long
     @staticmethod
@@ -237,7 +260,7 @@ class Question:
 
         return ordered_labels, ordered_values
 
-    def _plot_bar_distribution(
+    """def _plot_bar_distribution(
         self, labels, values, title, summary_stats=None, orientation="v"
     ):
         if not values or sum(values) == 0:
@@ -305,9 +328,9 @@ class Question:
             marker_line_width=1,
         )
 
-        return fig
+        return fig"""
 
-    def _plot_histogram(self, values, title, summary_stats=None):
+    """def _plot_histogram(self, values, title, summary_stats=None):
         values = pd.to_numeric(pd.Series(values), errors="coerce").dropna()
         truncated = self.truncate_after_first_period(title)
         wrapped_title = self.wrap_text(truncated, width=60)
@@ -346,7 +369,7 @@ class Question:
             xaxis_title=self.metadata.get("x_label", "Value"),
             yaxis_title="Percentage (%)",
         )
-        return fig
+        return fig"""
 
     def get_mean_std_per_subcolumn(self) -> tuple[list[str], list[float], list[float]]:
         labels = self.get_labels(self.subcolumns)
@@ -358,7 +381,7 @@ class Question:
             stds.append(series.std())
         return labels, means, stds
 
-    def _plot_bar_distribution_avg(self, labels, values, title, error_y=None):
+    """def _plot_bar_distribution_avg(self, labels, values, title, error_y=None):
         fig = px.bar(
             x=labels,
             y=values,
@@ -403,13 +426,13 @@ class Question:
             xaxis_tickangle=0,
         )
 
-        return fig
+        return fig"""
 
-    def _plot_pie_distribution(self, labels, values, title):
+    """def _plot_pie_distribution(self, labels, values, title):
         truncated = self.truncate_after_first_period(title)
         wrapped_title = self.wrap_text(truncated, width=80)
 
         fig = px.pie(names=labels, values=values, title=wrapped_title)
         fig.update_traces(textposition="inside", textinfo="percent+label")
         fig.update_layout(width=600, height=400, margin=dict(r=100))
-        return fig
+        return fig"""

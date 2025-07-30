@@ -1,4 +1,5 @@
 from .base import Question
+from libs.plotting import grouped_bar
 import pandas as pd
 import numpy as np
 import plotly.express as px
@@ -70,7 +71,9 @@ class MatrixQuestion(Question):
         self.get_mappings()
         self.row_map = self.metadata.get("row_map", {})
         self.grouping_key = self.metadata.get("row_grouping_label", "Group")
-        self.anchor_type = kwargs.get("anchor_type", "parent_gender")
+        # self.anchor_type = kwargs.get("anchor_type", "parent_gender")
+        meta_default = self.metadata.get("group_by", "row")
+        self.anchor_type = kwargs.get("anchor_type", meta_default)
 
     def get_parent_gender(
         self, respondent_id: int, parent_number: str
@@ -101,6 +104,26 @@ class MatrixQuestion(Question):
             except Exception as e:
                 print(f"[Warning] Failed to normalize time in {subcol}: {e}")
         return responses
+
+    def as_frame(self) -> pd.DataFrame:
+        records = []
+        for subcol in self.subcolumns:
+            unit_code = subcol.split("_")[-1]
+            row_code = subcol.split("_")[-2] if len(subcol.split("_")) >= 2 else None
+            row_label = self.row_map.get(int(row_code), row_code)
+
+            series = self.df[["ResponseId", subcol]].dropna(subset=[subcol])
+            series[subcol] = self.normalize_units(series[subcol], subcol)
+
+            for rid, val in series[["ResponseId", subcol]].values:
+                records.append(
+                    {
+                        "ResponseId": rid,
+                        "row": row_label,
+                        "value": val,
+                    }
+                )
+        return pd.DataFrame.from_records(records)
 
     def distribution(self, display=False):
         if not self.subcolumns:
@@ -344,28 +367,38 @@ class MatrixQuestion(Question):
                 lambda x: 0 if x.sum() == 0 else 100 * x / x.sum()
             )
 
-        # Automatically bin values if question is numeric and continuous
-        """if pd.api.types.is_numeric_dtype(grouped["Value"]):
-            grouped = grouped.copy()
-            grouped["Value"] = grouped["Value"].clip(upper=60)
-
-            bin_edges = [0, 3, 6, 9, 12, 18, 24, 36, 48, 60]
-            bin_labels = [f"{a}-{b}" for a, b in zip(bin_edges[:-1], bin_edges[1:])]
-            grouped["Bin_Label"] = pd.cut(
-                grouped["Value"], bins=bin_edges, labels=bin_labels, right=False
-            )
-
-            value_key = "Bin_Label"
-        else:
-            value_key = "Value"""
-
-        value_key = "Bin_Label"
+        """value_key = "Bin_Label"
 
         fig = self._plot_grouped_bar_distribution(
             grouped,
             self.question_text,
             value_key=value_key,
             group_key=self.grouping_key,
+        )
+
+        if self.question_id == "PL2":
+            fig.update_layout(xaxis_title="Months")
+
+        if display and fig is not None:
+            fig.show()
+
+        return fig"""
+        if self.anchor_type != "parent_gender":
+            # we want academic‑position groups, not gender
+            self.grouping_key = "Group"
+
+        value_key = "Bin_Label"  # keep using the binned label
+
+        fig = grouped_bar(
+            grouped,
+            x=value_key,
+            y="Percentage",
+            hue=self.grouping_key,
+            title=self.question_text,
+            category_orders={
+                value_key: list(grouped[value_key].unique()),
+                self.grouping_key: list(grouped[self.grouping_key].unique()),
+            },
         )
 
         if self.question_id == "PL2":
