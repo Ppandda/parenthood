@@ -484,6 +484,7 @@ DE13 = {
 DE14 = {
     "value_map": {1: "Woman", 2: "Man", 3: "Non-binary person"},
     "row_map": {1: "Parent 1", 2: "Parent 2"},
+    "group_by": "parent_gender",
 }
 
 
@@ -499,6 +500,7 @@ DE15 = {
         8: "Doctoral degree",
         9: "Dont know",
     },
+    "group_by": "parent_gender",
     # "row_map": {1: "Parent 1", 2: "Parent 2"},
 }
 
@@ -511,6 +513,7 @@ DE16 = {
         4: "Not employed: other reason (e.g., retired, illness, ...)",
         5: "Dont know or something else",
     },
+    "group_by": "parent_gender",
     # "row_map": {1: "Parent 1", 2: "Parent 2"},
 }
 
@@ -617,6 +620,7 @@ PL1 = {
         4: "Yes, full relief of duties",
         5: "Don't know",
     },
+    "group_by": "row",
 }
 
 
@@ -634,6 +638,7 @@ PL2 = {
         "max_value": 52,
     },
     "value_transform": unified_time_to_months,
+    "group_by": "row",
 }
 
 PL3 = {
@@ -655,6 +660,7 @@ PL4 = {
         "min_value": 0,
         "max_value": 36,  # assuming max 3 years; adjust based on actual data
     },
+    "group_by": "row",
 }
 
 
@@ -687,6 +693,7 @@ PL6 = {
         5: "Yes, and I spent at least 2/3 of that time on work-related activities",
         6: "Not applicable",
     },
+    "group_by": "row",
 }
 
 
@@ -698,6 +705,7 @@ PL7 = {
     | {10: "10th child (youngest if more than 10)"},
     "sub_map": {1: "Weeks", 2: "Months", 3: "Quarters", 4: "Semesters"},
     "value_transform": unified_time_to_weeks,
+    "group_by": "row",
 }
 
 
@@ -745,6 +753,7 @@ CS1 = {
         for i in range(1, 11)
     },
     "sub_map": {1: "Childcare provided", 2: "Did you use it?"},
+    "group_by": "row",
 }
 
 # CS3 – matrix: rating parental policies across 51 countries

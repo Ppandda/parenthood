@@ -1,4 +1,5 @@
 from .base import Question
+from libs.plotting import hist
 import pandas as pd
 
 
@@ -23,7 +24,17 @@ class NumericQuestion(Question):
         self.extract_columns()
         self.extract_numeric_responses()
 
-    def distribution(self, display=True):
+    def as_frame(self) -> pd.DataFrame:
+        if "ResponseId" not in self.df.columns:
+            raise KeyError("DataFrame lacks 'ResponseId' column")
+
+        series = self.get_combined_responses().dropna()
+        resp_ids = self.df.loc[series.index, "ResponseId"].values
+        return pd.DataFrame(
+            {"ResponseId": resp_ids, "value": series.values}
+        ).reset_index(drop=True)
+
+    """def distribution(self, display=True):
         if self.responses is None or len(self.responses) == 0:
             print(
                 f"[Warning] Skipping plot for question '{self.question_id}': no responses."
@@ -45,6 +56,20 @@ class NumericQuestion(Question):
         if display and fig is not None:
             fig.show()
 
+        return fig"""
+
+    def distribution(self, display: bool = True):
+        if self.responses is None or len(self.responses) == 0:
+            return None
+
+        values = self.get_combined_responses().dropna()
+        fig = hist(
+            values,
+            title=self.question_text,
+            x_label=self.metadata.get("x_label", "Value"),
+        )
+        if display and fig is not None:
+            fig.show()
         return fig
 
     def extract_numeric_responses(self):

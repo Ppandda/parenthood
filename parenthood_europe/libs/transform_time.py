@@ -51,3 +51,50 @@ def unified_time_to_months(value, unit_code):
         return round(value * factor_map.get(unit_code_str, 1), 2)
     except:
         return value
+
+
+# --- new canonical entry‑point ----------------------------------------------
+import pandas as pd
+from typing import Dict
+
+_FACTOR_TO_MONTHS = {
+    "week": 1 / 4.345,
+    "month": 1,
+    "quarter": 3,
+    "semester": 6,
+    "year": 12,
+}
+
+
+def to_months(
+    series: pd.Series, unit_code: str, *, sub_map: Dict[int, str] | None = None
+) -> pd.Series:
+    """
+    Vectorised conversion of a numeric Series to *months*.
+
+    Parameters
+    ----------
+    series     : pd.Series of numbers (may contain NaNs)
+    unit_code  : the suffix from the column name (e.g. «1», «2», «week» …)
+    sub_map    : optional mapping from numeric codes → unit labels
+                 taken from question_maps.<QID>["sub_map"].
+
+    Returns
+    -------
+    pd.Series (float) in months, with NaNs preserved.
+    """
+    # Resolve code → label
+    if unit_code.isdigit() and sub_map:
+        unit_label = sub_map.get(int(unit_code), None)
+    else:
+        unit_label = str(unit_code)
+
+    if unit_label is None:
+        raise ValueError(f"Unknown unit code {unit_code!r} with no sub_map")
+
+    unit_label = unit_label.lower()
+    if unit_label not in _FACTOR_TO_MONTHS:
+        raise ValueError(f"Unsupported time unit: {unit_label!r}")
+
+    factor = _FACTOR_TO_MONTHS[unit_label]
+    return series.astype(float) * factor

@@ -1,4 +1,5 @@
 from .base import Question
+from libs.plotting import bar
 import pandas as pd
 
 
@@ -30,6 +31,17 @@ class MultipleChoiceQuestion(Question):
         for row in self.responses.dropna():
             combined.extend(row.split(","))
         return pd.Series(combined, dtype=str)"""
+
+    def as_frame(self) -> pd.DataFrame:
+        if "ResponseId" not in self.df.columns:
+            raise KeyError("Missing ResponseId")
+        rows = []
+        for rid, cell in self.df[["ResponseId", self.question_id]].dropna().values:
+            for raw in str(cell).split(","):
+                rows.append(
+                    {"ResponseId": rid, "value": self.value_map.get(int(raw), raw)}
+                )
+        return pd.DataFrame(rows)
 
     def get_flattened_responses(self) -> pd.Series:
         if self.responses is None:
@@ -65,7 +77,7 @@ class MultipleChoiceQuestion(Question):
             "custom_responses": self.custom_responses,
         }
 
-    def distribution(self, display=True):
+    """def distribution(self, display=True):
         combined_series = self.get_flattened_responses()
         mapped = combined_series.astype(str).map(
             {str(k): v for k, v in self.value_map.items()}
@@ -80,4 +92,21 @@ class MultipleChoiceQuestion(Question):
         if display and fig is not None:
             fig.show()
 
+        return fig"""
+
+    def distribution(self, display: bool = True):
+        if self.responses is None:
+            return None
+
+        flat = self.get_flattened_responses().dropna()
+        if flat.empty:
+            return None
+
+        mapped = flat.astype(str).map({str(k): v for k, v in self.value_map.items()})
+        counts = mapped.value_counts()
+        labels, values = self.get_ordered_labels_and_values(counts)
+
+        fig = bar(labels, values, title=self.question_text)
+        if display and fig is not None:
+            fig.show()
         return fig
