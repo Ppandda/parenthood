@@ -35,17 +35,17 @@ class Question:
         self.df = df
         self.meta = meta
         self.value_transform = value_transform
-        self.question_text = None
+        self.question_text = self.get_question_text()
         self.get_mappings()
         self.extract_columns()
 
-    def extract_question_text(self, col):
-        """
-        Extracts the survey question text from df row 1 for the given column.
-        For example: "In what year were you born?" from df.loc[1, "DE1"].
+    def get_question_text(self) -> str:
+        for k in self.meta:
+            if k.startswith(self.question_id):
+                return self.meta[k]
+        return self.question_id
 
-        Returns None if no valid text is found.
-        """
+    """def extract_question_text(self, col):
         if 1 in self.df.index and col in self.df.columns:
             try:
                 question_text = self.df.loc[1, col]
@@ -53,9 +53,9 @@ class Question:
                     return question_text.strip()
             except Exception:
                 pass
-        return None
+        return None"""
 
-    def parse_column_id(self, col, question_id):
+    """def parse_column_id(self, col, question_id):
         remainder = col.replace(question_id + "_", "")
         is_text = remainder.endswith("_TEXT")
         option_id = remainder.replace("_TEXT", "")
@@ -74,7 +74,49 @@ class Question:
             "option_id": option_id,
             "is_text": is_text,
             "question_text": question_text,
+        }"""
+
+    def parse_column_id(self, col: str, question_id: str) -> dict[str, Any]:
+        """
+        Parses column names like:
+        - DE14_1
+        - PL2_3_4
+        - DE23_1_2
+        And returns row/sub IDs and labels based on metadata.
+        """
+        result = {
+            "question_id": question_id,
+            "raw_column": col,
+            "row": None,
+            "sub": None,
+            "row_label": None,
+            "sub_label": None,
+            "is_text": col.endswith("_TEXT"),
         }
+
+        if col == question_id or col.endswith("_TEXT"):
+            return result  # No further parsing needed
+
+        remainder = col.replace(question_id + "_", "")
+        parts = remainder.split("_")
+
+        try:
+            if self.row_map:
+                result["row"] = int(parts[0])
+                result["row_label"] = self.row_map.get(
+                    result["row"], str(result["row"])
+                )
+                parts = parts[1:]
+
+            if self.sub_map and parts:
+                result["sub"] = int(parts[0])
+                result["sub_label"] = self.sub_map.get(
+                    result["sub"], str(result["sub"])
+                )
+        except Exception:
+            pass  # fallback to None if parsing fails
+
+        return result
 
     def get_mappings(self):
         try:
@@ -107,17 +149,12 @@ class Question:
         self.subcolumns.sort()
         self.text_columns.sort()
 
-        candidate_col = self.subcolumns[0] if self.subcolumns else self.question_id
-        self.question_text = (
-            self._column_question_text(candidate_col) or self.question_id
-        )
-
         self.responses = (
             self.df[self.subcolumns].dropna(how="all") if self.subcolumns else None
         )
 
-    def _column_question_text(self, col):
-        return self.meta.get(col, {})
+    """def _column_question_text(self, col):
+        return self.meta.get(col, {})"""
 
     @staticmethod
     def _parse_column_id(col: str, question_id: str) -> dict[str, Any]:
@@ -133,8 +170,18 @@ class Question:
                 labels.append(col)  # fallback to raw col name
                 continue
             parsed = self.parse_column_id(col, self.question_id)
+
+            if parsed["row_label"] and parsed["sub_label"]:
+                label = f"{parsed['row_label']} — {parsed['sub_label']}"
+            elif parsed["row_label"]:
+                label = parsed["row_label"]
+            elif parsed["sub_label"]:
+                label = parsed["sub_label"]
+            else:
+                label = col
+            """parsed = self.parse_column_id(col, self.question_id)
             option_id = int(parsed["option_id"])
-            label = self.sub_map.get(option_id, col)
+            label = self.sub_map.get(option_id, col)"""
             labels.append(label)
         return labels
 
@@ -184,45 +231,6 @@ class Question:
         )
         return out
 
-    """def _choose_and_plot(self, labels, values, title, summary_stats=None):
-        truncated = self.truncate_after_first_period(title)
-        wrapped_title = self.wrap_text(truncated, width=80)
-
-        if self.plot_type == "continuous":
-            return self._plot_histogram(values, wrapped_title, summary_stats)
-
-        elif self.plot_type == "categorical":
-            if len(labels) < 3:
-                return self._plot_pie_distribution(labels, values, wrapped_title)
-            else:
-                orientation = "h" if len(labels) > 7 else "v"
-                return self._plot_bar_distribution(
-                    labels,
-                    values,
-                    wrapped_title,
-                    summary_stats,
-                    orientation=orientation,
-                )
-
-        elif self.plot_type == "average":
-            if hasattr(self, "subcolumns") and self.subcolumns:
-                labels, means, stds = self.get_mean_std_per_subcolumn()
-                return self._plot_bar_distribution_avg(
-                    labels, means, wrapped_title, error_y=stds
-                )
-            else:
-                orientation = "h" if len(labels) > 7 else "v"
-                return self._plot_bar_distribution(
-                    labels,
-                    values,
-                    wrapped_title,
-                    summary_stats,
-                    orientation=orientation,
-                )
-
-        else:
-            raise ValueError(f"Unknown plot_type: {self.plot_type}")"""
-
     # cutoff question title if too long
     @staticmethod
     def truncate_after_first_period(text: str) -> str:
@@ -260,117 +268,6 @@ class Question:
 
         return ordered_labels, ordered_values
 
-    """def _plot_bar_distribution(
-        self, labels, values, title, summary_stats=None, orientation="v"
-    ):
-        if not values or sum(values) == 0:
-            print(
-                f"[Warning] Skipping plot for question '{self.question_id}': no responses."
-            )
-            return None
-
-        percentages = [(v / sum(values)) * 100 for v in values]
-        raw_counts = [sum(values) * (p / 100) for p in percentages]
-        customdata = [int(round(v)) for v in raw_counts]
-
-        # Sort descending
-        sorted_data = sorted(
-            zip(percentages, labels, values, customdata),
-            key=lambda x: x[0],
-            reverse=True,
-        )
-        percentages, labels, values, customdata = zip(*sorted_data)
-        wrapped_labels = (
-            labels
-            if orientation == "h"
-            else [self.wrap_label(label, width=20) for label in labels]
-        )
-
-        # Axis logic
-        category_axis = "y" if orientation == "h" else "x"
-        category_orders = {category_axis: list(wrapped_labels)}
-
-        if orientation == "h":
-            fig = px.bar(
-                y=wrapped_labels,
-                x=percentages,
-                orientation="h",
-                title=title,
-                text=[f"{round(p, 1)} %" for p in percentages],
-                hover_data=None,
-                category_orders=category_orders,
-            )
-        else:
-            fig = px.bar(
-                x=wrapped_labels,
-                y=percentages,
-                orientation="v",
-                title=title,
-                text=[f"{round(p, 1)} %" for p in percentages],
-                hover_data=None,
-                category_orders=category_orders,
-            )
-
-        fig.update_layout(
-            width=1000,
-            # height=max(600, 30 * len(labels)) if orientation == "h" else 500,
-            height=500,
-            margin=dict(r=200),
-            xaxis_title="Percentage (%)" if orientation == "h" else "",
-            yaxis_title="" if orientation == "h" else "Percentage (%)",
-        )
-
-        fig.update_traces(
-            customdata=customdata,
-            hovertemplate="Total responses: %{customdata}<extra></extra>",
-            marker_color="#4876AE",
-            marker_line_color=None,
-            marker_line_width=1,
-        )
-
-        return fig"""
-
-    """def _plot_histogram(self, values, title, summary_stats=None):
-        values = pd.to_numeric(pd.Series(values), errors="coerce").dropna()
-        truncated = self.truncate_after_first_period(title)
-        wrapped_title = self.wrap_text(truncated, width=60)
-
-        counts = values.value_counts().sort_index()  # exact years
-        percentages = counts / counts.sum() * 100
-
-        x = counts.index  # e.g., 1965, 1966, 1967...
-        y = percentages
-
-        customdata = list(zip(x, counts))
-
-        x_label = self.metadata.get("x_label", "Value")
-        hovertemplate = f"{x_label}: %{{customdata[0]}}<br>Total responses: %{{customdata[1]}}<extra></extra>"
-
-        # Manually construct the bar chart
-        fig = go.Figure(
-            data=[
-                go.Bar(
-                    x=x,
-                    y=y,
-                    customdata=customdata,
-                    hovertemplate=hovertemplate,
-                    marker_color="#4876AE",
-                    marker_line_color="black",
-                    marker_line_width=1,
-                )
-            ]
-        )
-
-        fig.update_layout(
-            title=wrapped_title,
-            width=1000,
-            height=500,
-            margin=dict(r=200),
-            xaxis_title=self.metadata.get("x_label", "Value"),
-            yaxis_title="Percentage (%)",
-        )
-        return fig"""
-
     def get_mean_std_per_subcolumn(self) -> tuple[list[str], list[float], list[float]]:
         labels = self.get_labels(self.subcolumns)
         means = []
@@ -380,59 +277,3 @@ class Question:
             means.append(series.mean())
             stds.append(series.std())
         return labels, means, stds
-
-    """def _plot_bar_distribution_avg(self, labels, values, title, error_y=None):
-        fig = px.bar(
-            x=labels,
-            y=values,
-            error_y=error_y,
-            text=[f"{v:.1f} h" for v in values],
-            title=title,
-            hover_data=None,
-        )
-        try:
-            subcolumns = self.subcolumns
-            customdata = [len(self.responses[sub].dropna()) for sub in subcolumns]
-        except AttributeError:
-            customdata = [None] * len(labels)
-        fig.update_traces(
-            customdata=customdata,
-            hovertemplate="Average: %{y:.1f} h<br>Total responses: %{customdata}<extra></extra>",
-        )
-
-        wrapped_labels = [self.wrap_label(lbl, width=20) for lbl in labels]
-        fig.update_xaxes(
-            type="category",
-            tickvals=labels,
-            ticktext=wrapped_labels,
-            tickangle=0,
-            automargin=True,
-        )
-
-        fig.update_traces(
-            marker_color="#4876AE",
-            marker_line_color="black",
-            marker_line_width=1,
-            textposition="auto",
-        )
-
-        fig.update_layout(
-            title=title,
-            width=1000,
-            height=500,
-            margin=dict(t=80, b=120),
-            xaxis_title=self.xaxis_title,
-            yaxis_title=self.yaxis_title,
-            xaxis_tickangle=0,
-        )
-
-        return fig"""
-
-    """def _plot_pie_distribution(self, labels, values, title):
-        truncated = self.truncate_after_first_period(title)
-        wrapped_title = self.wrap_text(truncated, width=80)
-
-        fig = px.pie(names=labels, values=values, title=wrapped_title)
-        fig.update_traces(textposition="inside", textinfo="percent+label")
-        fig.update_layout(width=600, height=400, margin=dict(r=100))
-        return fig"""

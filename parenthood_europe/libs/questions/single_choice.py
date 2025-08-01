@@ -47,20 +47,3 @@ class SingleChoiceQuestion(Question):
         if display and fig is not None:
             fig.show()
         return fig
-
-    """def distribution(self, display=True):
-        if self.responses is None or len(self.responses) == 0:
-            print(
-                f"[Warning] Skipping plot for question '{self.question_id}': no responses."
-            )
-            return None
-
-        counts = self.responses[self.subcolumns[0]].map(self.value_map).value_counts()
-        labels, values = self.get_ordered_labels_and_values(counts)
-
-        fig = self._choose_and_plot(labels, values, self.question_text)
-
-        if display and fig is not None:
-            fig.show()
-
-        return fig"""
