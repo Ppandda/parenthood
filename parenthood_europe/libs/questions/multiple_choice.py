@@ -77,23 +77,6 @@ class MultipleChoiceQuestion(Question):
             "custom_responses": self.custom_responses,
         }
 
-    """def distribution(self, display=True):
-        combined_series = self.get_flattened_responses()
-        mapped = combined_series.astype(str).map(
-            {str(k): v for k, v in self.value_map.items()}
-        )
-        counts = mapped.value_counts()
-
-        # title = self.truncate_after_first_period(self.question_text)
-        # fig = self.plot_distribution_from_counts(counts, title)
-        labels, values = self.get_ordered_labels_and_values(counts)
-        fig = self._choose_and_plot(labels, values, self.question_text)
-
-        if display and fig is not None:
-            fig.show()
-
-        return fig"""
-
     def distribution(self, display: bool = True):
         if self.responses is None:
             return None

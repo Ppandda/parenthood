@@ -1,9 +1,29 @@
 from .base import Question
+from libs.plotting import grouped_bar
 import pandas as pd
 import numpy as np
 import plotly.express as px
 from typing import Optional
-from transform_time import unified_time_to_weeks
+from transform_time import unified_time_to_weeks, unified_time_to_months
+import question_maps
+from question_maps import DE5 as _COUNTRY_MAP
+import country_converter as coco
+
+cc = coco.CountryConverter()
+
+YEAR_ZERO = 2025
+
+
+def _country_code_to_label(code: int, *, to_region: bool = False) -> str:
+    """Translate numeric country code to country name or region label."""
+    name = _COUNTRY_MAP["value_map"].get(int(code), str(code))
+
+    if to_region:
+        if name in {"Serbia and Montenegro", "Serbia", "Montenegro"}:
+            return "Europe"
+
+    region = cc.convert(names=name, to="Continent", not_found=None)
+    return region or name
 
 
 def auto_bin_grouped_df(df, value_col="Value", group_col="Group"):
@@ -37,22 +57,23 @@ class MatrixQuestion(Question):
         self,
         question_id,
         df,
-        df_raw,
+        meta: dict[str, dict],
         value_transform=None,
         gender_lookup=None,
         **kwargs,
     ):
-        super().__init__(question_id, df, df_raw, value_transform)
+        super().__init__(question_id, df, meta, value_transform)
 
         self.df.index = self.df.index.astype(int)
-        self.df_raw.index = self.df_raw.index.astype(int)
 
         self.extract_columns()
         self.gender_lookup = gender_lookup
         self.get_mappings()
         self.row_map = self.metadata.get("row_map", {})
         self.grouping_key = self.metadata.get("row_grouping_label", "Group")
-        self.anchor_type = kwargs.get("anchor_type", "parent_gender")
+        # self.anchor_type = kwargs.get("anchor_type", "parent_gender")
+        meta_default = self.metadata.get("group_by", "row")
+        self.anchor_type = kwargs.get("anchor_type", meta_default)
 
     def get_parent_gender(
         self, respondent_id: int, parent_number: str
@@ -60,18 +81,17 @@ class MatrixQuestion(Question):
         """
         Given a respondent and whether it's parent 1 or 2, fetch the gender label.
         """
-        gender_question_id = (
-            "DE14"  # hardcoded because we know this special logic only applies to DE14
-        )
-        gender_column = f"{gender_question_id}_{parent_number}"
+        gender_col = f"DE14_{parent_number}"
         try:
-            gender_code = self.df_raw.at[respondent_id, gender_column]
-            if pd.isna(gender_code):
-                return None
-            gender_label = self.metadata.get("value_map", {}).get(int(gender_code))
-
-            return gender_label
+            code = self.df.at[respondent_id, gender_col]
         except KeyError:
+            return None
+        if pd.isna(code):
+            return None
+        try:
+            de14_meta = getattr(question_maps, "DE14")
+            return de14_meta.get("value_map", {}).get(int(code))
+        except Exception:
             return None
 
     def normalize_units(self, responses: pd.Series, subcol: str) -> pd.Series:
@@ -80,10 +100,30 @@ class MatrixQuestion(Question):
             try:
                 unit_code = subcol.split("_")[-1]
                 unit_label = self.sub_map.get(int(unit_code), unit_code)
-                return responses.apply(lambda v: unified_time_to_weeks(v, unit_label))
+                return responses.apply(lambda v: unified_time_to_months(v, unit_label))
             except Exception as e:
                 print(f"[Warning] Failed to normalize time in {subcol}: {e}")
         return responses
+
+    def as_frame(self) -> pd.DataFrame:
+        records = []
+        for subcol in self.subcolumns:
+            unit_code = subcol.split("_")[-1]
+            row_code = subcol.split("_")[-2] if len(subcol.split("_")) >= 2 else None
+            row_label = self.row_map.get(int(row_code), row_code)
+
+            series = self.df[["ResponseId", subcol]].dropna(subset=[subcol])
+            series[subcol] = self.normalize_units(series[subcol], subcol)
+
+            for rid, val in series[["ResponseId", subcol]].values:
+                records.append(
+                    {
+                        "ResponseId": rid,
+                        "row": row_label,
+                        "value": val,
+                    }
+                )
+        return pd.DataFrame.from_records(records)
 
     def distribution(self, display=False):
         if not self.subcolumns:
@@ -92,25 +132,121 @@ class MatrixQuestion(Question):
             )
             return None
 
+        if self.question_id == "DE23":
+            data = []
+
+            # Every child has two sub-columns: “…_<child>_1” (year) and “…_<child>_2” (country)
+            for child_id in self.row_map:  # 1 … 10
+                col_year = f"{self.question_id}_{child_id}_1"
+                col_country = f"{self.question_id}_{child_id}_2"
+                if (
+                    col_year not in self.df.columns
+                    or col_country not in self.df.columns
+                ):
+                    continue
+
+                yrs = self.df[col_year].dropna()
+                for respondent_id, year in yrs.items():
+                    year = (
+                        YEAR_ZERO - int(year) if pd.notna(year) else 0
+                    )  # 0 should be seen as an outlier
+                    country_code = self.df.at[respondent_id, col_country]
+                    if pd.isna(country_code):
+                        continue  # no country ⇒ skip point
+
+                    group_lbl = _country_code_to_label(
+                        country_code, to_region=True
+                    )  # flip to_region=True if you prefer buckets
+                    data.append(
+                        dict(
+                            Group=group_lbl,
+                            Value=int(year),  # numeric year; will be binned below
+                            Count=1,
+                            Percentage=100,
+                        )
+                    )
+
+            if not data:
+                return None
+
+            df_data = pd.DataFrame(data)
+
+            # standard → percentage within each country/region
+            df_data = (
+                df_data.groupby(["Group", "Value"], observed=True)
+                .agg(Count=("Count", "sum"))
+                .reset_index()
+            )
+            df_data["Percentage"] = df_data.groupby("Group")["Count"].transform(
+                lambda x: 100 * x / x.sum()
+            )
+
+            # ===  decade buckets  ====================================================
+            # Drop this block if you prefer Plotly's auto-bins
+            df_data["Bin_Label"] = (
+                (df_data["Value"] // 10 * 10).astype(int).astype(str)
+                + "–"
+                + ((df_data["Value"] // 10 * 10) + 9).astype(int).astype(str)
+            )
+            df_data["Value"] = df_data[
+                "Bin_Label"
+            ]  # overwrite so the call below is unchanged
+
+            # Re-aggregate now that Value is binned
+            df_data = (
+                df_data.groupby(["Group", "Value"])
+                .agg(Count=("Count", "sum"))
+                .reset_index()
+            )
+            df_data["Percentage"] = (
+                100
+                * df_data["Count"]
+                / df_data.groupby("Value")["Count"].transform("sum")
+            )
+
+            # ========================================================================
+            """value_order = df_data["Value"].unique().tolist()
+
+            # Re-use the existing bar-plot helper; it only needs ‘Value’, ‘Group’, ‘Percentage’
+            fig = self._plot_grouped_bar_distribution(
+                df_data,
+                self.question_text,
+                value_key="Value",
+                group_key="Group",
+                value_order=value_order,
+            )"""
+            fig = grouped_bar(
+                df_data,
+                x="Value",  # already numeric decades (or 'Bin_Label' if you prefer)
+                y="Percentage",
+                hue="Group",
+                title=self.question_text,
+                category_orders={
+                    "Value": sorted(df_data["Value"].unique(), key=str),
+                    "Group": sorted(df_data["Group"].unique(), key=str),
+                },
+            )
+            fig.update_traces(marker_pattern_shape="")
+
+            if display and fig is not None:
+                fig.show()
+            return fig
+
         data = []
 
         for subcol in self.subcolumns:
             responses = self.responses[subcol].dropna()
             mapped = self.normalize_units(responses, subcol)
 
-            if not self.sub_map:
-                if self.value_map:
-                    if all(isinstance(k, int) for k in self.value_map):
-                        responses_numeric = pd.to_numeric(responses, errors="coerce")
-                        mapped = (
-                            responses_numeric.round()
-                            .astype("Int64")
-                            .map(self.value_map)
-                        )
-                    else:
-                        mapped = responses.map(self.value_map)
-                else:
-                    mapped = responses
+            if (
+                self.value_map
+                and isinstance(self.value_map, dict)
+                and all(isinstance(k, int) for k in self.value_map)
+            ):
+                try:
+                    mapped = mapped.astype("Int64").map(self.value_map)
+                except Exception:
+                    pass
 
             sub_id = subcol.split("_")[-1]
 
@@ -158,21 +294,7 @@ class MatrixQuestion(Question):
                         int(sub_id), f"{self.question_id}_{sub_id}"
                     )
                     value_label = self.value_map.get(value, value)
-                    # else:
-                    # anchor_type == "none"
-                    #   group_label = self.value_map.get(value, value)
-                    #  value_label = self.sub_map.get(
-                    #     f"{self.question_id}_{sub_id}", f"{self.question_id}_{sub_id}"
-                    # )
 
-                    """data.append(
-                        {
-                            "Group": gender_label,
-                            "Value": value if self.question_id != "DE14" else gender_label,
-                            "Count": 1,
-                            "Percentage": 100,
-                        }
-                    )"""
                 data.append(
                     {
                         "Group": group_label,
@@ -187,19 +309,47 @@ class MatrixQuestion(Question):
 
         df_data = pd.DataFrame(data)
 
+        # Optional: clip extreme outliers or typos
+        # Reasonable bins for duration-type questions
+        # --- Custom binning for known duration-based questions like PL2 ---
+        if self.question_id == "PL2":
+            df_data["Value"] = df_data["Value"].clip(lower=0, upper=60)
+
+            bin_edges = [0, 2, 4, 7, 13, 19, 25, 37, float("inf")]
+
+            bin_labels = ["0–1", "2–3", "4–6", "7–12", "13–18", "19–24", "25–36", "37+"]
+
+            df_data["Bin_Label"] = pd.cut(
+                df_data["Value"], bins=bin_edges, labels=bin_labels, right=False
+            )
+
+            df_data = df_data[df_data["Bin_Label"].notna()]
+
+        # --- Generic fallback for other numeric questions ---
+        else:
+            if pd.api.types.is_numeric_dtype(df_data["Value"]):
+                try:
+                    df_data["Bin_Label"] = pd.qcut(
+                        df_data["Value"], q=8, duplicates="drop"
+                    ).astype(str)
+                except ValueError:
+                    df_data["Bin_Label"] = pd.cut(df_data["Value"], bins=4).astype(str)
+            else:
+                # fallback for non-numeric labels (leave as-is)
+                df_data["Bin_Label"] = df_data["Value"].astype(str)
+
+        # --- Grouping for both cases ---
         grouped = (
-            df_data.groupby(["Group", "Value"])
+            df_data.groupby(["Group", "Bin_Label"], observed=True)
             .agg(Count=("Count", "sum"))
             .reset_index()
         )
 
-        """# if self.question_id == "DE14":
-        if self.anchor_type == "parent_gender":
-            grouped["Percentage"] = 100 * grouped["Count"] / grouped["Count"].sum()
-        else:
-            grouped["Percentage"] = grouped.groupby("Group")["Count"].transform(
-                lambda x: 100 * x / x.sum()
-            )"""
+        grouped["Percentage"] = (
+            100
+            * grouped["Count"]
+            / grouped.groupby("Bin_Label")["Count"].transform("sum")
+        )
 
         if self.anchor_type == "parent_gender":
             grouped["Percentage"] = (
@@ -210,46 +360,53 @@ class MatrixQuestion(Question):
         else:
             for name, group in grouped.groupby("Group"):
                 total = group["Count"].sum()
-                print(f"Group: {name}, Count sum: {total}")
-                assert not pd.isna(total), "Count sum is NaN"
-                assert total != 0, f"Zero sum in group {name}"
+                # print(f"Group: {name}, Count sum: {total}")
+                # assert not pd.isna(total), "Count sum is NaN"
+                # assert total != 0, f"Zero sum in group {name}"
             grouped["Percentage"] = grouped.groupby("Group")["Count"].transform(
                 lambda x: 0 if x.sum() == 0 else 100 * x / x.sum()
             )
 
-        # Automatically bin values if question is numeric and continuous
-        if pd.api.types.is_numeric_dtype(grouped["Value"]):
-            grouped, bin_edges = auto_bin_grouped_df(
-                grouped, value_col="Value", group_col=self.grouping_key
-            )
-            value_key = "Bin_Label"
-        else:
-            value_key = "Value"
+        if self.anchor_type != "parent_gender":
+            # we want academic‑position groups, not gender
+            self.grouping_key = "Group"
 
-        fig = self._plot_grouped_bar_distribution(
+        value_key = "Bin_Label"  # keep using the binned label
+
+        fig = grouped_bar(
             grouped,
-            self.question_text,
-            value_key=value_key,
-            group_key=self.grouping_key,
+            x=value_key,
+            y="Percentage",
+            hue=self.grouping_key,
+            title=self.question_text,
+            category_orders={
+                value_key: list(grouped[value_key].unique()),
+                self.grouping_key: list(grouped[self.grouping_key].unique()),
+            },
         )
+
+        if self.question_id == "PL2":
+            fig.update_layout(xaxis_title="Months")
 
         if display and fig is not None:
             fig.show()
 
         return fig
 
-    def _plot_grouped_bar_distribution(
-        self, df, title, value_key="Value", group_key="Group"
+    """def _plot_grouped_bar_distribution(
+        self, df, title, value_key="Value", group_key="Group", value_order=None
     ):
         raw_title = self.truncate_after_first_period(self.question_text)
         wrapped_title = self.wrap_text(raw_title, width=60)
 
-        value_order = list(self.metadata.get("value_map", {}).values())
+        if value_order is None:
+            value_order = list(self.metadata.get("value_map", {}).values())
         group_order = list(self.metadata.get("row_map", {}).values())
 
         label_lengths = [len(str(v)) for v in value_order]
-        long_labels = any(l > 13 for l in label_lengths) or (
-            sum(label_lengths) / len(label_lengths) > 18 if label_lengths else False
+        long_labels = (
+            any(l > 13 for l in label_lengths)
+            or (sum(label_lengths) / len(label_lengths)) > 18
         )
 
         xaxis_kwargs = {}
@@ -296,9 +453,9 @@ class MatrixQuestion(Question):
             df["BarWidth"] = 0.6
             fig = px.bar(
                 df,
-                x="Value",
+                x=value_key,
                 y="Percentage",
-                color="Value",
+                color=value_key,
                 title=wrapped_title,
                 text=df["Percentage"].apply(lambda x: f"{round(x, 1)}%"),
                 hover_data=["Count"],
@@ -331,7 +488,7 @@ class MatrixQuestion(Question):
 
         fig.update_traces(marker_line_color=None, marker_line_width=1)
 
-        return fig
+        return fig"""
 
     def __repr__(self):
         if not self.responses:

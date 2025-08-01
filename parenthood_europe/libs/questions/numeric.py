@@ -34,30 +34,6 @@ class NumericQuestion(Question):
             {"ResponseId": resp_ids, "value": series.values}
         ).reset_index(drop=True)
 
-    """def distribution(self, display=True):
-        if self.responses is None or len(self.responses) == 0:
-            print(
-                f"[Warning] Skipping plot for question '{self.question_id}': no responses."
-            )
-            return None
-
-        values = self.get_combined_responses()
-        summary_stats = {
-            "Min": values.min(),
-            "Mean": values.mean(),
-            "Median": values.median(),
-            "Total Responses": len(values),
-        }
-
-        fig = self._choose_and_plot(
-            self.get_labels(self.subcolumns), values, self.question_text, summary_stats
-        )
-
-        if display and fig is not None:
-            fig.show()
-
-        return fig"""
-
     def distribution(self, display: bool = True):
         if self.responses is None or len(self.responses) == 0:
             return None
