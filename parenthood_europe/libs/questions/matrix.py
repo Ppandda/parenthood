@@ -68,6 +68,14 @@ class BirthYearMatrixQuestion(Question):
                 "Group": sorted(grp["Group"].unique()),
             },
         )
+
+        meta = self.metadata or {}
+        if fig:
+            xlbl = meta.get("x_label")
+            fig.update_layout(xaxis_title=xlbl)
+            if meta.get("legend_title"):
+                fig.update_layout(legend_title_text=meta["legend_title"])
+
         if display and fig:
             fig.show()
         return fig
@@ -131,8 +139,59 @@ class MatrixQuestion(Question):
 
         df_long = build_long_df(self)
 
+        decoded = False
+
+        vm_cfg = getattr(question_maps, self.question_id, {}).get("value_map", {})
+        if vm_cfg and not (
+            self.question_id == "DE14" and self.anchor_type == "parent_gender"
+        ):
+            codes = pd.to_numeric(df_long["value"], errors="coerce")
+            vm_keys = {int(k) for k in vm_cfg.keys() if str(k).isdigit()}
+            if vm_keys and (codes.isin(vm_keys).mean() >= 0.5):
+                df_long["value"] = codes.map({int(k): v for k, v in vm_cfg.items()})
+                decoded = True
+
+        handled = False
+        bin_cfg = None  # so we can safely reference it later
+        if "Count" not in df_long.columns:  # needed before any percent_within()
+            df_long["Count"] = 1
+
+        # PL6 (and similar): show % per child → x=child (Group), hue=option (value)
+        swap_cfg = (self.metadata or {}).get("swap_axes") or getattr(
+            question_maps, self.question_id, {}
+        ).get("swap_axes")
+
+        if swap_cfg:
+            # consistent orders
+            child_order = sorted(df_long["Group"].unique(), key=lambda s: int(str(s)))
+            option_order = (
+                [vm_cfg[k] for k in vm_cfg]
+                if vm_cfg
+                else list(df_long["value"].unique())
+            )
+
+            if swap_cfg == "value_on_x":
+                # x = option, hue = child
+                grouped = percent_within(df_long, ["value", "Group"])
+                self.grouping_key = "Group"
+                value_key = "value"
+                order_for_x = option_order
+                hue_order = child_order
+            else:
+                # x = child, hue = option (previous behavior)
+                grouped = percent_within(df_long, ["Group", "value"])
+                self.grouping_key = "value"
+                value_key = "Group"
+                order_for_x = child_order
+                hue_order = option_order
+
+            handled = True
         # ------- parent‑gender override -----------------------------------
-        if self.anchor_type == "parent_gender":
+        elif (
+            (not handled)
+            and self.anchor_type == "parent_gender"
+            and self.question_id == "DE14"
+        ):
             df_long["Group"] = df_long.apply(
                 lambda r: resolve_gender(
                     self.df,
@@ -147,41 +206,64 @@ class MatrixQuestion(Question):
         # ------------------------------------------------------------------
         # 1.  Binning logic (PL2 has its own fixed bins, everything else generic)
         # ------------------------------------------------------------------
-        if self.question_id == "PL2":
-            df_long["value"] = df_long["value"].clip(lower=0, upper=60)
-
-            bins = [0, 2, 4, 7, 13, 19, 25, 37, float("inf")]
-            labels = ["0–1", "2–3", "4–6", "7–12", "13–18", "19–24", "25–36", "37+"]
-
-            df_long["Bin_Label"] = pd.cut(
-                df_long["value"], bins=bins, labels=labels, right=False
-            )
-            df_long = df_long.dropna(subset=["Bin_Label"])
-            value_key = "Bin_Label"
-            order_for_x = labels  # preserve our fixed order
-        else:
-            if pd.api.types.is_numeric_dtype(df_long["value"]):
-                df_long["Bin_Label"] = bin_numeric(df_long["value"])
+        if not handled:
+            bin_cfg = (self.metadata or {}).get("binning") or getattr(
+                question_maps, self.question_id, {}
+            ).get("binning")
+            if bin_cfg:
+                vals = pd.to_numeric(df_long["value"], errors="coerce")
+                edges = bin_cfg["edges"]
+                labels = bin_cfg["labels"]
+                df_long["Bin_Label"] = pd.cut(
+                    vals, bins=edges, labels=labels, right=False
+                )
+                df_long = df_long.dropna(subset=["Bin_Label"])
                 value_key = "Bin_Label"
-                order_for_x = numeric_sort(list(df_long[value_key].unique()))
+                order_for_x = labels
             else:
-                value_key = "value"
-                order_for_x = sorted(df_long[value_key].unique())
+                if pd.api.types.is_numeric_dtype(df_long["value"]):
+                    df_long["Bin_Label"] = bin_numeric(df_long["value"])
+                    value_key = "Bin_Label"
+                    order_for_x = numeric_sort(list(df_long[value_key].unique()))
+                else:
+                    value_key = "value"
+                    order_for_x = sorted(df_long[value_key].unique())
 
         # ------------------------------------------------------------------
         # 2. Before aggregation and plotting
         # ------------------------------------------------------------------
 
-        df_long["Count"] = 1
+        if (
+            (not handled)
+            and self.anchor_type == "parent_gender"
+            and self.question_id == "DE14"
+        ):
+            # --- map codes -> labels and lock the semantic order ---
+            vm = question_maps.DE14["value_map"]  # {1:'Woman', 2:'Man', 3:'Non-binary'}
+            label_order = [vm[k] for k in vm]  # preserve map insertion order
 
-        if self.anchor_type == "parent_gender" and self.question_id == "DE14":
-            # For DE14, aggregate only by 'value' (gender label) globally
+            if not decoded:
+                df_long["value"] = pd.to_numeric(df_long["value"], errors="coerce").map(
+                    vm
+                )
+
+            df_long["value"] = pd.Categorical(
+                df_long["value"], categories=label_order, ordered=True
+            )
+
+            # --- aggregate globally over 'value' ---
             grouped = (
                 df_long.groupby("value", observed=True)
                 .agg(Count=("Count", "sum"))
                 .reset_index()
             )
-            # Compute percentages globally (sum to 100%)
+
+            # keep categorical order in the aggregated frame too
+            grouped["value"] = pd.Categorical(
+                grouped["value"], categories=label_order, ordered=True
+            )
+            grouped = grouped.sort_values("value")
+
             total_count = grouped["Count"].sum()
             grouped["Percentage"] = (
                 100 * grouped["Count"] / total_count if total_count > 0 else 0
@@ -189,39 +271,61 @@ class MatrixQuestion(Question):
 
             self.grouping_key = "value"
             value_key = "value"
-            order_for_x = sorted(grouped[value_key].unique())
+            order_for_x = label_order  # <- use semantic order
 
-        else:
+        elif not handled:
             # Existing logic for all other questions
             grouped = percent_within(df_long, ["Group", value_key])
 
             if self.anchor_type != "parent_gender":
                 self.grouping_key = "Group"
 
-            # Sort x-axis labels for plotting
-            if pd.api.types.is_numeric_dtype(df_long[value_key]):
-                order_for_x = sorted(grouped[value_key].unique())
+            if bin_cfg:
+                pass
             else:
-                order_for_x = sorted(grouped[value_key].unique())
+                if pd.api.types.is_numeric_dtype(df_long[value_key]):
+                    order_for_x = sorted(grouped[value_key].unique())
+                else:
+                    totals = (
+                        grouped.groupby(value_key, observed=True)["Percentage"]
+                        .sum()
+                        .sort_values(ascending=False)
+                    )
+                    order_for_x = list(totals.index)
 
         # --- Plotting ---
+
+        # Use the grouping key unless it would duplicate x
+        hue_key = self.grouping_key
+        if hue_key == value_key:  # <— generic, no QID hardcode
+            hue_key = None  # single full-width bar per category
+
+        cat_orders = {value_key: order_for_x}
+        if hue_key:
+            cat_orders[hue_key] = (
+                hue_order
+                if "hue_order" in locals() and hue_order is not None
+                else sorted(grouped[hue_key].unique())
+            )
 
         fig = grouped_bar(
             grouped,
             x=value_key,
             y="Percentage",
-            hue=self.grouping_key,
+            hue=hue_key,
             title=self.question_text,
-            category_orders={
-                value_key: order_for_x,
-                self.grouping_key: sorted(grouped[self.grouping_key].unique()),
-            },
+            category_orders=cat_orders,
         )
 
-        if self.question_id == "PL2":
-            fig.update_layout(xaxis_title="Months")
+        meta = self.metadata or {}
+        if fig is not None and bin_cfg and bin_cfg.get("unit"):
+            fig.update_layout(xaxis_title=bin_cfg["unit"].capitalize())
+        elif "x_label" in meta:
+            fig.update_layout(xaxis_title=meta["x_label"] or "")
+        if "legend_title" in meta:
+            fig.update_layout(legend_title_text=meta["legend_title"] or "")
 
-        if display and fig:
+        if display and fig is not None:
             fig.show()
 
         return fig

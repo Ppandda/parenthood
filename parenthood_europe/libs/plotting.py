@@ -125,7 +125,7 @@ def grouped_bar(
     *,
     x: str,
     y: str,
-    hue: str,
+    hue: str | None,
     title: str,
     palette: Sequence[str] | None = None,
     category_orders: dict | None = None,
@@ -146,17 +146,63 @@ def grouped_bar(
             "#808F85",
         ]
 
-    fig = px.bar(
-        df,
-        x=x,
-        y=y,
-        color=hue,
-        barmode="group",
-        text=df[y].apply(lambda v: f"{v:.1f}%" if isinstance(v, float) else v),
-        title=_wrap_text(_truncate_after_first_period(title), 60),
-        category_orders=category_orders,
-        color_discrete_sequence=palette,
-    )
+    if hue is None:
+        # single-trace chart; still color bars by x using our palette
+        fig = px.bar(
+            df,
+            x=x,
+            y=y,
+            text=df[y].apply(lambda v: f"{v:.1f}%" if isinstance(v, float) else v),
+            title=_wrap_text(_truncate_after_first_period(title), 60),
+            category_orders=category_orders,
+        )
+        # map categories → colors using provided order if available
+        order = (category_orders or {}).get(x, list(dict.fromkeys(df[x].dropna())))
+        color_map = {cat: palette[i % len(palette)] for i, cat in enumerate(order)}
+        if len(fig.data) == 1:
+            fig.data[0].marker.color = [color_map.get(v, palette[0]) for v in df[x]]
+
+        wrapped = [_wrap_label(v, 20) for v in order]
+        fig.update_xaxes(
+            tickmode="array", tickvals=order, ticktext=wrapped, tickangle=0
+        )
+
+        for lab in order:
+            fig.add_trace(
+                go.Scatter(
+                    x=[None],
+                    y=[None],
+                    mode="markers",
+                    marker=dict(
+                        color=color_map[lab],
+                        symbol="square",
+                        size=12,
+                        line=dict(width=0),
+                    ),
+                    name=str(lab),
+                    showlegend=True,
+                    hoverinfo="skip",
+                )
+            )
+    else:
+        fig = px.bar(
+            df,
+            x=x,
+            y=y,
+            color=hue,
+            barmode="group",
+            text=df[y].apply(lambda v: f"{v:.1f}%" if isinstance(v, float) else v),
+            title=_wrap_text(_truncate_after_first_period(title), 60),
+            category_orders=category_orders,
+            color_discrete_sequence=palette,
+        )
+
+    order = (category_orders or {}).get(x, list(dict.fromkeys(df[x].dropna())))
+    wrapped = [_wrap_label(v, 20) for v in order]
+    fig.update_xaxes(tickmode="array", tickvals=order, ticktext=wrapped, tickangle=0)
+
     fig.update_layout(width=1000, height=500, margin=dict(r=200))
-    fig.update_traces(marker_line_color=None, marker_line_width=1)
+    fig.update_traces(
+        marker_line_color=None, marker_line_width=1, selector=dict(type="bar")
+    )
     return fig

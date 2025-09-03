@@ -485,6 +485,8 @@ DE14 = {
     "value_map": {1: "Woman", 2: "Man", 3: "Non-binary person"},
     "row_map": {1: "Parent 1", 2: "Parent 2"},
     "group_by": "parent_gender",
+    "legend_title": "Parent",
+    "x_label": None,
 }
 
 
@@ -583,6 +585,8 @@ DE23 = {
         "year_range": (1900, 2025),
         # "country_map": COUNTRY_MAP  # ← from DE5 and DE6
     },
+    "legend_title": "Region",
+    "x_label": "Decade",
 }
 
 
@@ -639,6 +643,11 @@ PL2 = {
     },
     "value_transform": unified_time_to_months,
     "group_by": "row",
+    "binning": {
+        "unit": "months",
+        "edges": [0, 2, 4, 7, 13, 19, 25, 37, float("inf")],
+        "labels": ["0–1", "2–3", "4–6", "7–12", "13–18", "19–24", "25–36", "37+"],
+    },
 }
 
 PL3 = {
@@ -656,13 +665,14 @@ PL3 = {
 PL4 = {
     "row_map": {1: "PhD students", 2: "Postdocs", 3: "Professors"},
     "sub_map": {1: "Maternal (mother)", 2: "Paternal (father)"},
-    "value_map": {
-        "min_value": 0,
-        "max_value": 36,  # assuming max 3 years; adjust based on actual data
+    "group_by": "row",
+    "binning": {
+        "unit": "months",
+        "edges": [0, 2, 4, 7, 13, 19, 25, 37, float("inf")],
+        "labels": ["0–1", "2–3", "4–6", "7–12", "13–18", "19–24", "25–36", "37+"],
     },
     "group_by": "row",
 }
-
 
 PL5 = {
     "plot_type": "categorical",
@@ -676,16 +686,8 @@ PL5 = {
 
 
 PL6 = {
-    "row_map": {
-        str(
-            i
-        ): f"Your {i}{'st' if i == 1 else 'nd' if i == 2 else 'rd' if i == 3 else 'th'} child"
-        for i in range(1, 10)
-    }
-    | {
-        10: "Your 10th child (if you have more than 10 kids, please consider the youngest)"
-    },
-    "sub_map": {
+    "row_map": {i: str(i) for i in range(1, 11)},
+    "value_map": {
         1: "No, I did not take the leave",
         2: "Yes, and I did not do anything work-related during that time",
         3: "Yes, and I spent up to 1/3 of that time on work-related activities",
@@ -694,6 +696,9 @@ PL6 = {
         6: "Not applicable",
     },
     "group_by": "row",
+    "swap_axes": "value_on_x",
+    "legend_title": "Child",
+    "x_label": None,
 }
 
 
