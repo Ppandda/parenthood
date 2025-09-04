@@ -1,6 +1,6 @@
 # Parenthood in Academia
 
-Replication data and code for "The Unequal Impact of Parenthood in Academia"
+Replication data and code for "The Unequal Impact of Parenthood in Academia".
 
 ##### `code`
 
