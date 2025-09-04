@@ -1,0 +1,25 @@
+# ignore data-like outputs
+*.csv
+*.tsv
+*.xlsx
+*.xls
+*.json
+*.jsonl
+*.parquet
+*.feather
+*.pkl
+*.pickle
+*.gz
+*.bz2
+*.xz
+*.zip
+*.7z
+*.html
+*.png
+*.jpg
+*.jpeg
+
+# explicitly ALLOW code/notebooks
+!*.py
+!*.ipynb
+!README*
